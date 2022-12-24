@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-#define MMZ_GRAPHICS_SUPPORT 1
+#define MMZ_GRAPHICS_SUPPORT 0
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
@@ -128,33 +128,104 @@ int rand_lim(int limit) {
     return retval;
 }
 
+float dist(const vecf_t *pos, const vecf_t *other) {
+  float x = other->x - pos->x;
+  float y = other->y - pos->y;
+
+  if (x == 0 && y == 0) return 0.0f;
+  return abs(sqrtf(x*x + y*y));
+}
+
 typedef struct {
   player_t *p;
+  gamestate_t *gs;
 } me_t;
 
-static int mehealth(lua_State *L) {
+typedef struct {
+  enum entity_type type;
+  int id;
+} lua_entity_t;
+
+static int entity_id(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 1);
+  lua_pushinteger(L, ent->id);
+  return 1;
+}
+
+int lua_entity_to_string(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 1);
+  lua_pushfstring(L, "<Entity id=%d type=%d>", ent->id, ent->type);
+  return 1;
+}
+
+static const struct luaL_Reg entitylib_m[] = {
+  {"__tostring", lua_entity_to_string},
+  {"id", entity_id},
+  {NULL, NULL}
+};
+
+static const struct luaL_Reg entitylib_f[] = {
+  {NULL, NULL}
+};
+
+int luaopen_entitylib(lua_State *L) {
+  luaL_newmetatable(L, "mimizu.entity");
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);
+  lua_settable(L, -3);
+
+  luaL_openlib(L, NULL, entitylib_m, 0);
+  luaL_openlib(L, "entity", entitylib_f, 0);
+  return 1;
+}
+
+static int me_health(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   lua_pushnumber(L, me->p->health);
   return 1;
 }
 
-static int meid(lua_State *L) {
+static int me_id(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   lua_pushinteger(L, me->p->id);
   return 1;
 }
 
-static int memove(lua_State *L) {
+static int me_move(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   me->p->dir.x = (float)luaL_checknumber(L, 2);
   me->p->dir.y = (float)luaL_checknumber(L, 3);
   return 0;
 }
 
+static int me_visible(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  gamestate_t *gs = me->gs;
+
+  lua_newtable(L);
+  int idx = 1;
+  for (int i = 0; i < gs->n_players; i++) {
+    player_t *other = &gs->players[i];
+    if ((me->p->id != other->id) && dist(&me->p->pos, &other->pos) < 50) {
+      lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
+      luaL_getmetatable(L, "mimizu.entity");
+      lua_setmetatable(L, -2);
+
+      ent->id = other->id;
+      ent->type = PLAYER;
+
+      lua_rawseti(L, -2, idx++);
+    }
+  }
+
+  return 1;
+}
+
 static const struct luaL_Reg melib_m[] = {
-  {"health", mehealth},
-  {"move", memove},
-  {"id", meid},
+  {"health", me_health},
+  {"move", me_move},
+  {"id", me_id},
+  {"visible", me_visible},
   {NULL, NULL}
 };
 
@@ -173,7 +244,8 @@ int luaopen_melib(lua_State *L) {
   return 1;
 }
 
-void call_bot_fn(lua_State *L, player_t *p, char *fn) {
+
+void call_bot_fn(lua_State *L, player_t *p, gamestate_t *gs, char *fn) {
     lua_getglobal(L, fn);
 
     me_t *me = lua_newuserdata(L, sizeof(me_t));
@@ -181,43 +253,19 @@ void call_bot_fn(lua_State *L, player_t *p, char *fn) {
     lua_setmetatable(L, -2);
 
     me->p = p;
+    me->gs = gs;
 
     if (lua_pcall(L, 1, 0, 0)) {
       printf("error running function `%s`: %s", fn, lua_tostring(L, -1));
     }
 }
 
-void call_bot_main(lua_State *L, player_t *p) {
-  call_bot_fn(L, p, "bot_main");
+void call_bot_main(lua_State *L, player_t *p, gamestate_t *gs) {
+  call_bot_fn(L, p, gs, "bot_main");
 }
 
-void call_bot_init(lua_State *L, player_t *p) {
-  call_bot_fn(L, p, "bot_init");
-}
-
-void inject_stuff_into_lua_test() {
-    char *program = "\
-a = 0\n\
-\n\
-function bot_main (me)\n\
-  print(a)\n\
-  print(me:health())\n\
-  me:move(3, 4)\n\
-  a = a + 1\n\
-end\n";
-    player_t p = { .health = 17, .dir = { .x = 0, .y = 0 } };
-    lua_State *L = luaL_newstate();
-    luaL_openlibs(L);
-    luaopen_melib(L);
-
-    if (luaL_loadstring(L, program) || lua_pcall(L, 0, 0, 0)) {
-      printf("cannot run file: %s", lua_tostring(L, -1));
-    }
-
-    call_bot_main(L, &p);
-    call_bot_main(L, &p);
-
-    printf("%f %f\n", p.dir.x, p.dir.y);
+void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
+  call_bot_fn(L, p, gs, "bot_init");
 }
 
 _Noreturn void *player_thread(void *data) {
@@ -243,6 +291,11 @@ function bot_main (me)\n\
     me:move(0, -1 * pol)\n\
   end\n\
   a = a + 1\n\
+  entities = me:visible()\n\
+  for _, eid in ipairs(entities) do\n\
+     print(eid)\n\
+  end\n\
+  for i=1,1000000 do end\n\
   if ((a % 100) == 0) then\n\
     pol = pol * -1\n\
   end\n\
@@ -251,6 +304,7 @@ end\n";
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
     luaopen_melib(L);
+    luaopen_entitylib(L);
 
     if (luaL_loadstring(L, program) || lua_pcall(L, 0, 0, 0)) {
       printf("cannot run file: %s", lua_tostring(L, -1));
@@ -262,14 +316,14 @@ end\n";
 
     int error = luaL_loadstring(L, program);
 
-    call_bot_init(L, this_player);
+    call_bot_init(L, this_player, gs);
 
     while (true) {
         while (ptd->curr_tick == tick) {
             pthread_cond_wait(&inc_tick_cond_var, &inc_tick_cond_mut);
         }
 
-        call_bot_main(L, this_player);
+        call_bot_main(L, this_player, gs);
 
         pthread_mutex_lock(&done_cond_mut);
         ptd->done = true;
