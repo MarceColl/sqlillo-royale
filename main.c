@@ -293,9 +293,8 @@ function bot_main (me)\n\
   a = a + 1\n\
   entities = me:visible()\n\
   for _, eid in ipairs(entities) do\n\
-     print(eid)\n\
   end\n\
-  for i=1,1000000 do end\n\
+  for i=1,10000000 do end\n\
   if ((a % 100) == 0) then\n\
     pol = pol * -1\n\
   end\n\
@@ -319,9 +318,11 @@ end\n";
     call_bot_init(L, this_player, gs);
 
     while (true) {
+        pthread_mutex_lock(&inc_tick_cond_mut);
         while (ptd->curr_tick == tick) {
-            pthread_cond_wait(&inc_tick_cond_var, &inc_tick_cond_mut);
+          pthread_cond_wait(&inc_tick_cond_var, &inc_tick_cond_mut);
         }
+        pthread_mutex_unlock(&inc_tick_cond_mut);
 
         call_bot_main(L, this_player, gs);
 
@@ -385,6 +386,7 @@ void run_match() {
 
     while (curr_time <= GAME_LENGTH) {
         bool done = false;
+        pthread_mutex_lock(&done_cond_mut);
         while (!done) {
             pthread_cond_wait(&done_cond_var, &done_cond_mut);
             done = true;
@@ -392,6 +394,8 @@ void run_match() {
                 done = done && ptd[i].done;
             }
         }
+        pthread_mutex_unlock(&done_cond_mut);
+
         for (int i = 0; i < gs.n_players; i++) {
             ptd[i].done = false;
         }
