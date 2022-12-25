@@ -369,18 +369,23 @@ void init_traces(gamestate_t *gs) {
 }
 
 void update_traces(gamestate_t *gs) {
-    yyjson_mut_val *keyid = yyjson_mut_str(gs->traces, "id");
-    yyjson_mut_val *keyx = yyjson_mut_str(gs->traces, "x");
-    yyjson_mut_val *keyy = yyjson_mut_str(gs->traces, "y");
-
     for (int i = 0; i < gs->n_players; i++) {
+      yyjson_mut_val *keyid = yyjson_mut_str(gs->traces, "id");
+      yyjson_mut_val *keyx = yyjson_mut_str(gs->traces, "x");
+      yyjson_mut_val *keyy = yyjson_mut_str(gs->traces, "y");
+      yyjson_mut_val *keytick = yyjson_mut_str(gs->traces, "t");
+      yyjson_mut_val *keytype = yyjson_mut_str(gs->traces, "ty");
       yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
       yyjson_mut_val *numid = yyjson_mut_int(gs->traces, i);
       yyjson_mut_val *numx = yyjson_mut_real(gs->traces, gs->players[i].pos.x);
       yyjson_mut_val *numy = yyjson_mut_real(gs->traces, gs->players[i].pos.y);
+      yyjson_mut_val *numtick = yyjson_mut_int(gs->traces, tick);
+      yyjson_mut_val *numtype = yyjson_mut_int(gs->traces, PLAYER);
       yyjson_mut_obj_add(item, keyid, numid);
       yyjson_mut_obj_add(item, keyx, numx);
       yyjson_mut_obj_add(item, keyy, numy);
+      yyjson_mut_obj_add(item, keytick, numtick);
+      yyjson_mut_obj_add(item, keytype, numtype);
       yyjson_mut_arr_append(gs->traces_arr, item);
     }
 }
