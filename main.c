@@ -2,15 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dlfcn.h>
-#include <sys/mman.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <pthread.h>
 #include <time.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
-#include <libpq-fe.h>
 #include <luajit.h>
 #include <stdint.h>
 #include <stdbool.h>
