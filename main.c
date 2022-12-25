@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <yyjson.h>
 
 #define MMZ_GRAPHICS_SUPPORT 0
 
@@ -74,10 +75,12 @@ typedef struct {
 } entity_t;
 
 typedef struct {
-    int n_players;
-    player_t *players;
-    entity_t *entities;
-    pthread_t *threads;
+  int n_players;
+  player_t *players;
+  entity_t *entities;
+  pthread_t *threads;
+  yyjson_mut_doc *traces;
+  yyjson_mut_val *traces_arr;
 } gamestate_t;
 
 typedef struct {
@@ -294,7 +297,7 @@ function bot_main (me)\n\
   entities = me:visible()\n\
   for _, eid in ipairs(entities) do\n\
   end\n\
-  for i=1,10000000 do end\n\
+  for i=1,100000 do end\n\
   if ((a % 100) == 0) then\n\
     pol = pol * -1\n\
   end\n\
@@ -345,6 +348,47 @@ void normalize(vecf_t *v) {
   v->y /= len;
 }
 
+void init_traces(gamestate_t *gs) {
+  gs->traces = yyjson_mut_doc_new(NULL);
+  yyjson_mut_val *root = yyjson_mut_obj(gs->traces);
+  yyjson_mut_val *keymap = yyjson_mut_str(gs->traces, "map");
+  yyjson_mut_val *map_obj = yyjson_mut_obj(gs->traces);
+  yyjson_mut_val *keyw = yyjson_mut_str(gs->traces, "w");
+  yyjson_mut_val *keyh = yyjson_mut_str(gs->traces, "h");
+  yyjson_mut_val *numw = yyjson_mut_int(gs->traces, 500);
+  yyjson_mut_val *numh = yyjson_mut_int(gs->traces, 500);
+  yyjson_mut_obj_add(map_obj, keyw, numw);
+  yyjson_mut_obj_add(map_obj, keyh, numh);
+  yyjson_mut_obj_add(root, keymap, map_obj);
+
+  yyjson_mut_val *traces = yyjson_mut_arr(gs->traces);
+  gs->traces_arr = traces;
+  yyjson_mut_val *traces_key = yyjson_mut_str(gs->traces, "traces");
+  yyjson_mut_obj_add(root, traces_key, traces);
+  yyjson_mut_doc_set_root(gs->traces, root);
+}
+
+void update_traces(gamestate_t *gs) {
+    yyjson_mut_val *keyid = yyjson_mut_str(gs->traces, "id");
+    yyjson_mut_val *keyx = yyjson_mut_str(gs->traces, "x");
+    yyjson_mut_val *keyy = yyjson_mut_str(gs->traces, "y");
+
+    for (int i = 0; i < gs->n_players; i++) {
+      yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
+      yyjson_mut_val *numid = yyjson_mut_int(gs->traces, i);
+      yyjson_mut_val *numx = yyjson_mut_real(gs->traces, gs->players[i].pos.x);
+      yyjson_mut_val *numy = yyjson_mut_real(gs->traces, gs->players[i].pos.y);
+      yyjson_mut_obj_add(item, keyid, numid);
+      yyjson_mut_obj_add(item, keyx, numx);
+      yyjson_mut_obj_add(item, keyy, numy);
+      yyjson_mut_arr_append(gs->traces_arr, item);
+    }
+}
+
+void save_traces(gamestate_t *gs) {
+  yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, NULL);
+}
+
 void run_match() {
     srand(time(NULL));
 
@@ -372,6 +416,7 @@ void run_match() {
     gamestate_t gs = {.n_players = 200, .players = (player_t *) malloc(
             sizeof(player_t) * 200), .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200)};
     player_thread_data_t *ptd = (player_thread_data_t *) malloc(sizeof(player_thread_data_t) * 200);
+    init_traces(&gs);
 
     printf("Setup players structures\n");
     for (int i = 0; i < gs.n_players; i++) {
@@ -406,6 +451,8 @@ void run_match() {
             gs.players[i].pos.y += gs.players[i].dir.y * TICK_TIME * BASE_PLAYER_SPEED;
         }
 
+        update_traces(&gs);
+
         curr_time += TICK_TIME;
 
 #if MMZ_GRAPHICS_SUPPORT
@@ -427,6 +474,8 @@ void run_match() {
         pthread_mutex_unlock(&inc_tick_cond_mut);
     }
 
+    save_traces(&gs);
+
     for (int i = 0; i < gs.n_players; i++) {
         pthread_cancel(gs.threads[i]);
     }
@@ -439,6 +488,8 @@ int main(int argc, char **argv) {
     printf(" | | | | | | | | | | | | |/ /| |_| |\n");
     printf(" |_| |_| |_|_|_| |_| |_|_/___|\\__,_|\n");
     printf("                                    \n");
+
+    printf("START\n");
 
     /* while (true) { */
       run_match();
