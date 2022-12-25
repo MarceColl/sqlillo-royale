@@ -12,13 +12,13 @@
 #include <math.h>
 #include <yyjson.h>
 
-#define MMZ_GRAPHICS_SUPPORT 0
+#define MMZ_GRAPHICS_SUPPORT 1
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
 #endif
 
-
+#define MAX_ENTITIES 5000
 #define BASE_PLAYER_SPEED 60
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
@@ -54,26 +54,33 @@ typedef struct {
 
 typedef struct {
   int id;
-    vecf_t pos;
-    vecf_t dir;
-    float cd[NUM_SKILLS];
-    int8_t health;
-    int8_t used_skill;
-    bool stunned;
+  float cd[NUM_SKILLS];
+  int8_t health;
+  int8_t used_skill;
+  vecf_t skill_dir;
+  bool stunned;
 } player_t;
 
 typedef struct {
-    vecf_t pos;
-    vecf_t dir;
-    enum entity_type type;
-    int owner;
-} entity_t;
+  enum entity_type type;
+  int owner;
+} entity_metadata_t;
 
 typedef struct {
+  /* Entities */
   int n_players;
   player_t *players;
-  entity_t *entities;
+
+  vecf_t pos[MAX_ENTITIES];
+  vecf_t dir[MAX_ENTITIES];
+  entity_metadata_t meta[MAX_ENTITIES];
+
+  int active_entities;
+
+  /* Handle threads */
   pthread_t *threads;
+
+  /* For traces json generation */
   yyjson_mut_doc *traces;
   yyjson_mut_val *traces_arr;
 } gamestate_t;
@@ -191,8 +198,9 @@ static int me_id(lua_State *L) {
 
 static int me_move(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
-  me->p->dir.x = (float)luaL_checknumber(L, 2);
-  me->p->dir.y = (float)luaL_checknumber(L, 3);
+  int eid = me->p->id;
+  me->gs->dir[eid].x = (float)luaL_checknumber(L, 2);
+  me->gs->dir[eid].y = (float)luaL_checknumber(L, 3);
   return 0;
 }
 
@@ -204,7 +212,7 @@ static int me_visible(lua_State *L) {
   int idx = 1;
   for (int i = 0; i < gs->n_players; i++) {
     player_t *other = &gs->players[i];
-    if ((me->p->id != other->id) && dist(&me->p->pos, &other->pos) < 50) {
+    if ((me->p->id != other->id) && dist(&me->gs->pos[me->p->id], &me->gs->pos[other->id]) < 50) {
       lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
       luaL_getmetatable(L, "mimizu.entity");
       lua_setmetatable(L, -2);
@@ -219,11 +227,20 @@ static int me_visible(lua_State *L) {
   return 1;
 }
 
+static int me_cast(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  me->p->used_skill = luaL_checkinteger(L, 2);
+  me->p->skill_dir.x = (float)luaL_checknumber(L, 3);
+  me->p->skill_dir.y = (float)luaL_checknumber(L, 4);
+  return 0;
+}
+
 static const struct luaL_Reg melib_m[] = {
   {"health", me_health},
   {"move", me_move},
   {"id", me_id},
   {"visible", me_visible},
+  {"cast", me_cast},
   {NULL, NULL}
 };
 
@@ -292,8 +309,8 @@ function bot_main (me)\n\
   entities = me:visible()\n\
   for _, eid in ipairs(entities) do\n\
   end\n\
-  for i=1,100000 do end\n\
   if ((a % 100) == 0) then\n\
+    me:cast(0, 5, 5)\n\
     pol = pol * -1\n\
   end\n\
 end\n";
@@ -364,18 +381,20 @@ void init_traces(gamestate_t *gs) {
 }
 
 void update_traces(gamestate_t *gs) {
-    for (int i = 0; i < gs->n_players; i++) {
+    for (int i = 0; i < gs->active_entities; i++) {
       yyjson_mut_val *keyid = yyjson_mut_str(gs->traces, "id");
       yyjson_mut_val *keyx = yyjson_mut_str(gs->traces, "x");
       yyjson_mut_val *keyy = yyjson_mut_str(gs->traces, "y");
       yyjson_mut_val *keytick = yyjson_mut_str(gs->traces, "t");
+      yyjson_mut_val *keyhealth = yyjson_mut_str(gs->traces, "h");
       yyjson_mut_val *keytype = yyjson_mut_str(gs->traces, "ty");
       yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
       yyjson_mut_val *numid = yyjson_mut_int(gs->traces, i);
-      yyjson_mut_val *numx = yyjson_mut_real(gs->traces, gs->players[i].pos.x);
-      yyjson_mut_val *numy = yyjson_mut_real(gs->traces, gs->players[i].pos.y);
+      yyjson_mut_val *numx = yyjson_mut_real(gs->traces, gs->pos[i].x);
+      yyjson_mut_val *numy = yyjson_mut_real(gs->traces, gs->pos[i].y);
       yyjson_mut_val *numtick = yyjson_mut_int(gs->traces, tick);
-      yyjson_mut_val *numtype = yyjson_mut_int(gs->traces, PLAYER);
+      yyjson_mut_val *numhealth = yyjson_mut_int(gs->traces, gs->players[i].health);
+      yyjson_mut_val *numtype = yyjson_mut_int(gs->traces, gs->meta[i].type);
       yyjson_mut_obj_add(item, keyid, numid);
       yyjson_mut_obj_add(item, keyx, numx);
       yyjson_mut_obj_add(item, keyy, numy);
@@ -387,6 +406,31 @@ void update_traces(gamestate_t *gs) {
 
 void save_traces(gamestate_t *gs) {
   yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, NULL);
+}
+
+int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos, vecf_t *dir, int owner) {
+  gs->active_entities += 1;
+  int eid = gs->active_entities;
+  gs->pos[eid].x = pos->x;
+  gs->pos[eid].y = pos->y;
+  gs->dir[eid].x = dir->x;
+  gs->dir[eid].y = dir->y;
+  gs->meta[eid].type = ty;
+  gs->meta[eid].owner = owner;
+}
+
+void delete_entity(gamestate_t *gs, int eid) {
+  int last_eid = gs->active_entities;
+  gs->active_entities -= 1;
+  if (last_eid == eid) {
+    return;
+  }
+  gs->pos[eid].x = gs->pos[last_eid].x;
+  gs->pos[eid].y = gs->pos[last_eid].y;
+  gs->dir[eid].x = gs->dir[last_eid].x;
+  gs->dir[eid].y = gs->dir[last_eid].y;
+  gs->meta[eid].type = gs->meta[last_eid].type;
+  gs->meta[eid].owner = gs->meta[last_eid].owner;
 }
 
 void run_match() {
@@ -413,17 +457,23 @@ void run_match() {
     printf("Created SDL renderer\n");
 #endif
 
-    gamestate_t gs = {.n_players = 200, .players = (player_t *) malloc(
-            sizeof(player_t) * 200), .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200)};
+    gamestate_t gs = {
+      .n_players = 200,
+      .active_entities = 200,
+      .players = (player_t *) malloc(sizeof(player_t) * 200),
+      .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200)
+    };
+
     player_thread_data_t *ptd = (player_thread_data_t *) malloc(sizeof(player_thread_data_t) * 200);
     init_traces(&gs);
 
     printf("Setup players structures\n");
     for (int i = 0; i < gs.n_players; i++) {
-        gs.players[i] = (player_t) {.id = i, .health = 100, .used_skill = -1, .stunned = 0, .pos = {.x = rand_lim(
-                500), .y = rand_lim(400)}};
-        ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1};
-        pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
+      gs.pos[i] = (vecf_t) {.x = rand_lim(500), .y = rand_lim(400)};
+      gs.players[i] = (player_t) {.id = i, .health = 100, .used_skill = -1, .stunned = 0 };
+      ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1};
+      gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
+      pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
     }
 
     float curr_time = 0;
@@ -445,10 +495,37 @@ void run_match() {
             ptd[i].done = false;
         }
 
-        for (int i = 0; i < gs.n_players; i++) {
-            normalize(&gs.players[i].dir);
-            gs.players[i].pos.x += gs.players[i].dir.x * TICK_TIME * BASE_PLAYER_SPEED;
-            gs.players[i].pos.y += gs.players[i].dir.y * TICK_TIME * BASE_PLAYER_SPEED;
+        for (int i = 0; i < gs.active_entities; i++) {
+            normalize(&gs.dir[i]);
+            gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
+            gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
+
+            if (gs.meta[i].type == PLAYER) {
+              if (gs.players[i].used_skill == 0) {
+                create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
+                gs.players[i].used_skill = -1;
+              }
+
+              for (int j = i + 1; j < gs.active_entities; j++) {
+                if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
+                  if (gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
+                    gs.players[i].health -= 20;
+                    delete_entity(&gs, j);
+                    j--;
+                  }
+                }
+              }
+
+              if (gs.players[i].health <= 0) {
+                printf("DEAD PLAYER %d\n", i);
+                pthread_cancel(gs.threads[i]);
+                delete_entity(&gs, i);
+              }
+            } else if (gs.meta[i].type == SMALL_PROJ) {
+              if (gs.pos[i].x < 0 || gs.pos[i].x > 500 || gs.pos[i].y < 0 || gs.pos[i].y > 500) {
+                delete_entity(&gs, i);
+              }
+            }
         }
 
         update_traces(&gs);
@@ -459,10 +536,19 @@ void run_match() {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-
-        for (int i = 0; i < gs.n_players; i++) {
-          SDL_RenderDrawPoint(renderer, gs.players[i].pos.x, gs.players[i].pos.y);
+        for (int i = 0; i < gs.active_entities; i++) {
+          switch (gs.meta[i].type) {
+          case PLAYER:
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+            break;
+          case SMALL_PROJ:
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+            break;
+          default:
+            SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
+            break;
+          }
+          SDL_RenderDrawPoint(renderer, gs.pos[i].x, gs.pos[i].y);
         }
 
         SDL_RenderPresent(renderer);
