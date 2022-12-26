@@ -405,6 +405,7 @@ void update_traces(gamestate_t *gs) {
       yyjson_mut_obj_add(item, keyx, numx);
       yyjson_mut_obj_add(item, keyy, numy);
       yyjson_mut_obj_add(item, keytick, numtick);
+      yyjson_mut_obj_add(item, keyhealth, numhealth);
       yyjson_mut_obj_add(item, keytype, numtype);
       yyjson_mut_arr_append(gs->traces_arr, item);
     }
