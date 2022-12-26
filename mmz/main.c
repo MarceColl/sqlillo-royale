@@ -19,7 +19,7 @@
 #endif
 
 #define MAX_ENTITIES 5000
-#define BASE_PLAYER_SPEED 60
+#define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
 
@@ -150,11 +150,25 @@ typedef struct {
 typedef struct {
   enum entity_type type;
   int id;
+  gamestate_t *gs;
 } lua_entity_t;
 
 static int entity_id(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 1);
   lua_pushinteger(L, ent->id);
+  return 1;
+}
+
+static int entity_pos(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 1);
+
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = ent->gs->pos[ent->id].x;
+  vec->y = ent->gs->pos[ent->id].y;
+
   return 1;
 }
 
@@ -167,6 +181,7 @@ int lua_entity_to_string(lua_State *L) {
 static const struct luaL_Reg entitylib_m[] = {
   {"__tostring", lua_entity_to_string},
   {"id", entity_id},
+  {"pos", entity_pos},
   {NULL, NULL}
 };
 
@@ -185,6 +200,91 @@ int luaopen_entitylib(lua_State *L) {
   return 1;
 }
 
+static int vec_new(lua_State *L) {
+  float x = (float)luaL_checknumber(L, 1);
+  float y = (float)luaL_checknumber(L, 2);
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = x;
+  vec->y = y;
+
+  return 1;
+}
+
+static int vec_add(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+  vecf_t *vec2 = (vecf_t*)lua_touserdata(L, 2);
+
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = vec1->x + vec2->x;
+  vec->y = vec1->y + vec2->y;
+
+  return 1;
+}
+
+static int vec_sub(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+  vecf_t *vec2 = (vecf_t*)lua_touserdata(L, 2);
+
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = vec1->x - vec2->x;
+  vec->y = vec1->y - vec2->y;
+
+  return 1;
+}
+
+static int vec_rot(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+  float angle = (float)luaL_checknumber(L, 2);
+
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = cos(angle) * vec1->x + sin(angle) * vec1->y;
+  vec->y = sin(angle) * vec1->x + cos(angle) * vec1->y;
+
+  return 1;
+}
+
+int vec_to_string(lua_State *L) {
+  vecf_t *vec = (vecf_t*)lua_touserdata(L, 1);
+  lua_pushfstring(L, "vec(%f, %f)", vec->x, vec->y);
+  return 1;
+}
+
+static const struct luaL_Reg veclib_m[] = {
+  {"add", vec_add},
+  {"sub", vec_sub},
+  {"rot", vec_rot},
+  {"__tostring", vec_to_string},
+  {NULL, NULL},
+};
+
+static const struct luaL_Reg veclib_f[] = {
+  {"new", vec_new},
+  {NULL, NULL},
+};
+
+int luaopen_veclib(lua_State *L) {
+  luaL_newmetatable(L, "mimizu.vec");
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);
+  lua_settable(L, -3);
+
+  luaL_openlib(L, NULL, veclib_m, 0);
+  luaL_openlib(L, "vec", veclib_f, 0);
+  return 1;
+}
+
 static int me_health(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   lua_pushnumber(L, me->p->health);
@@ -197,11 +297,20 @@ static int me_id(lua_State *L) {
   return 1;
 }
 
+static int me_pos(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  vec->x = me->gs->pos[me->p->id].x;
+  vec->y = me->gs->pos[me->p->id].y;
+  return 1;
+}
+
 static int me_move(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   int eid = me->p->id;
-  me->gs->dir[eid].x = (float)luaL_checknumber(L, 2);
-  me->gs->dir[eid].y = (float)luaL_checknumber(L, 3);
+  vecf_t *dir = (vecf_t*)lua_touserdata(L, 2);
+  me->gs->dir[eid].x = dir->x;
+  me->gs->dir[eid].y = dir->y;
   return 0;
 }
 
@@ -211,15 +320,16 @@ static int me_visible(lua_State *L) {
 
   lua_newtable(L);
   int idx = 1;
-  for (int i = 0; i < gs->n_players; i++) {
-    player_t *other = &gs->players[i];
-    if ((me->p->id != other->id) && dist(&me->gs->pos[me->p->id], &me->gs->pos[other->id]) < 50) {
+  for (int i = 0; i < gs->active_entities; i++) {
+    vecf_t *other = &gs->pos[i];
+    if ((me->p->id != i) && dist(&gs->pos[me->p->id], other) < 50) {
       lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
       luaL_getmetatable(L, "mimizu.entity");
       lua_setmetatable(L, -2);
 
-      ent->id = other->id;
-      ent->type = PLAYER;
+      ent->id = i;
+      ent->type = gs->meta[i].type;
+      ent->gs = gs;
 
       lua_rawseti(L, -2, idx++);
     }
@@ -230,9 +340,16 @@ static int me_visible(lua_State *L) {
 
 static int me_cast(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
-  me->p->used_skill = luaL_checkinteger(L, 2);
-  me->p->skill_dir.x = (float)luaL_checknumber(L, 3);
-  me->p->skill_dir.y = (float)luaL_checknumber(L, 4);
+  int skill = luaL_checkinteger(L, 2);
+  vecf_t *dir = (vecf_t*)lua_touserdata(L, 3);
+
+  if (me->p->cd[skill] <= 0) {
+    me->p->used_skill = skill;
+    me->p->skill_dir.x = dir->x;
+    me->p->skill_dir.y = dir->y;
+    me->p->cd[skill] = 30;
+  }
+
   return 0;
 }
 
@@ -242,6 +359,7 @@ static const struct luaL_Reg melib_m[] = {
   {"id", me_id},
   {"visible", me_visible},
   {"cast", me_cast},
+  {"pos", me_pos},
   {NULL, NULL}
 };
 
@@ -289,30 +407,19 @@ void *player_thread(void *data) {
   // * your health
     char *program = "\
 a = 0\n\
-pol = 1\n\
+dir = vec.new(1, 0)\n\
 \n\
 function bot_init (me)\n\
-  if ((me:id() % 2) == 0) then\n\
-    pol = -1\n\
-  end\n\
+  math.randomseed(os.clock()*10000)\n\
 end\n\
+\n\
 function bot_main (me)\n\
-  if ((a % 100) < 25) then\n\
-    me:move(pol * 1, 0)\n\
-  elseif ((a % 100) < 50) then\n\
-    me:move(0, pol * 1)\n\
-  elseif ((a % 100) < 75) then\n\
-    me:move(-1 * pol, 0)\n\
-  else\n\
-    me:move(0, -1 * pol)\n\
-  end\n\
+  dir = dir:add(vec.new(math.random(0, 10) - 5, math.random(0, 10) - 5))\n\
+  me:move(dir)\n\
   a = a + 1\n\
   entities = me:visible()\n\
-  for _, eid in ipairs(entities) do\n\
-  end\n\
-  if ((a % 100) == 0) then\n\
-    me:cast(0, 5, 5)\n\
-    pol = pol * -1\n\
+  for _, ent in ipairs(entities) do\n\
+    me:cast(0, ent:pos():sub(me:pos()))\n\
   end\n\
 end\n";
     player_thread_data_t *ptd = (player_thread_data_t *) data;
@@ -320,9 +427,11 @@ end\n";
     luaL_openlibs(L);
     luaopen_melib(L);
     luaopen_entitylib(L);
+    luaopen_veclib(L);
 
     if (luaL_loadstring(L, program) || lua_pcall(L, 0, 0, 0)) {
       printf("cannot run file: %s", lua_tostring(L, -1));
+      return;
     }
 
     int id = ptd->id;
@@ -507,14 +616,16 @@ void run_match() {
 
         for (int i = 0; i < gs.active_entities; i++) {
             normalize(&gs.dir[i]);
-            gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
-            gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
-
             if (gs.meta[i].type == PLAYER) {
+              gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
+              gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
+
               if (gs.players[i].used_skill == 0) {
                 create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
                 gs.players[i].used_skill = -1;
               }
+
+              gs.players[i].cd[0] -= 1;
 
               for (int j = i + 1; j < gs.active_entities; j++) {
                 if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
@@ -543,6 +654,9 @@ void run_match() {
                 ptd[i].dead = true;
               }
             } else if (gs.meta[i].type == SMALL_PROJ) {
+              gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED * 4;
+              gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED * 4;
+
               if (gs.pos[i].x < 0 || gs.pos[i].x > 500 || gs.pos[i].y < 0 || gs.pos[i].y > 500) {
                 delete_entity(&gs, i);
               }
