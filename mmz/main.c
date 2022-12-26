@@ -12,7 +12,7 @@
 #include <math.h>
 #include <yyjson.h>
 
-#define MMZ_GRAPHICS_SUPPORT 1
+#define MMZ_GRAPHICS_SUPPORT 0
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
@@ -92,6 +92,7 @@ typedef struct {
     int skipped_ticks;
     bool skip;
     bool done;
+    bool dead;
 } player_thread_data_t;
 
 enum trace_type {
@@ -283,7 +284,7 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
   call_bot_fn(L, p, gs, "bot_init");
 }
 
-_Noreturn void *player_thread(void *data) {
+void *player_thread(void *data) {
   // From the Lua code you can access several stuff
   // * your health
     char *program = "\
@@ -339,6 +340,10 @@ end\n";
         }
         pthread_mutex_unlock(&inc_tick_cond_mut);
 
+        if (ptd->dead) {
+          break;
+        }
+
         call_bot_main(L, this_player, gs);
 
         pthread_mutex_lock(&done_cond_mut);
@@ -348,6 +353,7 @@ end\n";
 
         ptd->curr_tick += 1;
     }
+    printf("DEAD PLAYER. EXITING THREAD...\n");
 }
 
 void normalize(vecf_t *v) {
@@ -417,6 +423,7 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos, vecf_t *dir
   gs->dir[eid].y = dir->y;
   gs->meta[eid].type = ty;
   gs->meta[eid].owner = owner;
+  return eid;
 }
 
 void delete_entity(gamestate_t *gs, int eid) {
@@ -459,7 +466,7 @@ void run_match() {
 
     gamestate_t gs = {
       .n_players = 200,
-      .active_entities = 200,
+      .active_entities = 199,
       .players = (player_t *) malloc(sizeof(player_t) * 200),
       .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200)
     };
@@ -471,7 +478,7 @@ void run_match() {
     for (int i = 0; i < gs.n_players; i++) {
       gs.pos[i] = (vecf_t) {.x = rand_lim(500), .y = rand_lim(400)};
       gs.players[i] = (player_t) {.id = i, .health = 100, .used_skill = -1, .stunned = 0 };
-      ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1};
+      ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false };
       gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
       pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
     }
@@ -486,7 +493,9 @@ void run_match() {
             pthread_cond_wait(&done_cond_var, &done_cond_mut);
             done = true;
             for (int i = 0; i < gs.n_players; i++) {
+              if (!ptd[i].dead) {
                 done = done && ptd[i].done;
+              }
             }
         }
         pthread_mutex_unlock(&done_cond_mut);
@@ -509,17 +518,28 @@ void run_match() {
               for (int j = i + 1; j < gs.active_entities; j++) {
                 if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
                   if (gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
-                    gs.players[i].health -= 20;
+                    gs.players[i].health -= 10;
                     delete_entity(&gs, j);
                     j--;
                   }
                 }
               }
 
+              if (gs.pos[i].x < 0) {
+                gs.pos[i].x = 0;
+              } else if (gs.pos[i].x > 500) {
+                gs.pos[i].x = 500;
+              }
+
+              if (gs.pos[i].y < 0) {
+                gs.pos[i].y = 0;
+              } else if (gs.pos[i].y > 500) {
+                gs.pos[i].y = 500;
+              }
+
               if (gs.players[i].health <= 0) {
-                printf("DEAD PLAYER %d\n", i);
-                pthread_cancel(gs.threads[i]);
                 delete_entity(&gs, i);
+                ptd[i].dead = true;
               }
             } else if (gs.meta[i].type == SMALL_PROJ) {
               if (gs.pos[i].x < 0 || gs.pos[i].x > 500 || gs.pos[i].y < 0 || gs.pos[i].y > 500) {
@@ -537,6 +557,7 @@ void run_match() {
         SDL_RenderClear(renderer);
 
         for (int i = 0; i < gs.active_entities; i++) {
+          if (ptd[i].dead) continue;
           switch (gs.meta[i].type) {
           case PLAYER:
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
