@@ -1,0 +1,112 @@
+%prefix "mmz"
+
+%value "ast_node_t *"
+%auxil "parser_state_t *"
+
+%source {
+#include <stdio.h>
+#include <stdlib.h>
+}
+
+%header {
+#include "ast.h"
+}
+
+program 
+	<- _ l:statement_list _ end_of_file
+	 {
+	 	$$ = l;
+	 }
+	 / _ end_of_file
+	 {
+	 	$$ = mmz_create_ast_node_variadic(auxil, AST_NODE_TYPE_STATEMENT_LIST, range_new($0s, $0e));
+	 }
+
+statement_list
+   <- s:statement _ l:statement_list
+    {
+        $$ = l;
+        $$->range = range_new($0s, $0e);
+        ast_node_prepend_child($$, s);
+    }
+    / s:statement
+    {
+      $$ = mmz_create_ast_node_variadic(auxil, AST_NODE_TYPE_STATEMENT_LIST, range_new($0s, $0e));
+      ast_node_prepend_child($$, s);
+    }
+	 	
+ident <- [a-zA-Z_]+
+      {
+      printf("%s %d %d\n", $0, $0s, $0e);
+      $$ = mmz_create_ast_node_terminal(auxil, AST_NODE_TYPE_IDENTIFIER, range_new($0s, $0e));
+      }
+
+assignment
+	<- i:ident _ '=' _ e:expression
+       {
+        $$ = mmz_create_ast_node_binary(auxil, AST_NODE_TYPE_OPERATOR_ASSIGN, range_new($0s, $0e), i, e);
+       }
+
+statement <- _ e:expression _ EOL { $$ = e; }
+           / a:assignment _ EOL   { $$ = a; }
+
+expression <- e:term { $$ = e; }
+
+term <- l:term _ '+' _ r:factor
+        {
+         $$ = mmz_create_ast_node_binary(auxil, AST_NODE_TYPE_OPERATOR_ADD, range_new($0s, $0e), l, r);
+        }
+      / l:term _ '-' _ r:factor
+        {
+         $$ = mmz_create_ast_node_binary(auxil, AST_NODE_TYPE_OPERATOR_SUB, range_new($0s, $0e), l, r);
+        }
+      / e:factor                { $$ = e; }
+
+factor <- l:factor _ '*' _ r:unary
+        {
+         $$ = mmz_create_ast_node_binary(auxil, AST_NODE_TYPE_OPERATOR_MUL, range_new($0s, $0e), l, r);
+        }
+      / l:factor _ '/' _ r:unary
+        {
+         $$ = mmz_create_ast_node_binary(auxil, AST_NODE_TYPE_OPERATOR_DIV, range_new($0s, $0e), l, r);
+        }
+      / e:unary                  { $$ = e; }
+
+unary <- '+' _ e:unary
+        {
+         $$ = mmz_create_ast_node_unary(auxil, AST_NODE_TYPE_OPERATOR_POS, range_new($0s, $0e), e);
+        }
+       / '-' _ e:unary
+        {
+         $$ = mmz_create_ast_node_unary(auxil, AST_NODE_TYPE_OPERATOR_NEG, range_new($0s, $0e), e);
+        }
+       / e:primary     { $$ = e; }
+
+primary <- < [0-9]+ >
+        {
+        $$ = mmz_create_ast_node_terminal(auxil, AST_NODE_TYPE_INTEGER_DEC, range_new($0s, $0e));
+        }
+        / i:ident                  { $$ = i; }
+        / '(' _ e:expression _ ')' { $$ = e; }
+
+_      <- [ \t]*
+EOL    <- '\n' / '\r\n' / '\r' / ';'
+
+end_of_file <- !.
+
+%%
+int main(int argc, char **argv) {
+    if (argc > 2) {
+        return 1;
+    }
+    const char *path = (argc > 1) ? argv[1] : NULL;
+    parser_state_t p;
+    p.code = "a = 12\n\
+12 + a\n";
+    ast_node_t *ast;
+    mmz_context_t *ctx = mmz_create(&p);
+    const int b = mmz_parse(ctx, &ast);
+    mmz_dump_ast(&p, ast);
+    mmz_destroy(ctx);
+    return 0;
+}
