@@ -12,7 +12,7 @@
 #include <math.h>
 #include <yyjson.h>
 
-#define MMZ_GRAPHICS_SUPPORT 0
+#define MMZ_GRAPHICS_SUPPORT 1
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
@@ -76,6 +76,13 @@ typedef struct {
   entity_metadata_t meta[MAX_ENTITIES];
 
   int active_entities;
+
+  /* Map */
+  float w, h;
+
+  vecf_t dc_center;
+  float dc_radius;
+  bool dc_active;
 
   /* Handle threads */
   pthread_t *threads;
@@ -241,6 +248,18 @@ static int vec_sub(lua_State *L) {
   return 1;
 }
 
+static int vec_x(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, vec1->x);
+  return 1;
+}
+
+static int vec_y(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, vec1->y);
+  return 1;
+}
+
 static int vec_rot(lua_State *L) {
   vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
   float angle = (float)luaL_checknumber(L, 2);
@@ -255,6 +274,19 @@ static int vec_rot(lua_State *L) {
   return 1;
 }
 
+static int vec_neg(lua_State *L) {
+  vecf_t *vec1 = (vecf_t*)lua_touserdata(L, 1);
+
+  vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
+
+  vec->x = -1 * vec1->x;
+  vec->y = -1 * vec1->y;
+
+  return 1;
+}
+
 int vec_to_string(lua_State *L) {
   vecf_t *vec = (vecf_t*)lua_touserdata(L, 1);
   lua_pushfstring(L, "vec(%f, %f)", vec->x, vec->y);
@@ -265,6 +297,9 @@ static const struct luaL_Reg veclib_m[] = {
   {"add", vec_add},
   {"sub", vec_sub},
   {"rot", vec_rot},
+  {"x", vec_x},
+  {"y", vec_y},
+  {"neg", vec_neg},
   {"__tostring", vec_to_string},
   {NULL, NULL},
 };
@@ -347,7 +382,6 @@ static int me_cast(lua_State *L) {
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
     me->p->skill_dir.y = dir->y;
-    me->p->cd[skill] = 30;
   }
 
   return 0;
@@ -378,7 +412,6 @@ int luaopen_melib(lua_State *L) {
   return 1;
 }
 
-
 void call_bot_fn(lua_State *L, player_t *p, gamestate_t *gs, char *fn) {
     lua_getglobal(L, fn);
 
@@ -407,6 +440,7 @@ void *player_thread(void *data) {
   // * your health
     char *program = "\
 a = 0\n\
+my_pos = vec.new(0, 0)\n\
 dir = vec.new(1, 0)\n\
 \n\
 function bot_init (me)\n\
@@ -414,12 +448,14 @@ function bot_init (me)\n\
 end\n\
 \n\
 function bot_main (me)\n\
+  my_pos = me:pos()\n\
   dir = dir:add(vec.new(math.random(0, 10) - 5, math.random(0, 10) - 5))\n\
   me:move(dir)\n\
   a = a + 1\n\
   entities = me:visible()\n\
   for _, ent in ipairs(entities) do\n\
-    me:cast(0, ent:pos():sub(me:pos()))\n\
+    me:cast(0, ent:pos():sub(my_pos))\n\
+    me:cast(1, ent:pos():sub(my_pos))\n\
   end\n\
 end\n";
     player_thread_data_t *ptd = (player_thread_data_t *) data;
@@ -559,6 +595,16 @@ void run_match() {
     pthread_cond_init(&done_cond_var, NULL);
     printf("Initialized base condition vars\n");
 
+    gamestate_t gs = {
+      .n_players = 200,
+      .active_entities = 199,
+      .players = (player_t *) malloc(sizeof(player_t) * 200),
+      .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200),
+      .w = 600,
+      .h = 500,
+      .dc_active = false,
+    };
+
 #if MMZ_GRAPHICS_SUPPORT
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
       printf("Error initializing SDL: %s\n", SDL_GetError());
@@ -568,25 +614,18 @@ void run_match() {
           "SQLillo Royale",
           SDL_WINDOWPOS_UNDEFINED,
           SDL_WINDOWPOS_UNDEFINED,
-          640, 480, 0);
+          gs.w, gs.h, 0);
 
     SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC);
     printf("Created SDL renderer\n");
 #endif
-
-    gamestate_t gs = {
-      .n_players = 200,
-      .active_entities = 199,
-      .players = (player_t *) malloc(sizeof(player_t) * 200),
-      .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200)
-    };
 
     player_thread_data_t *ptd = (player_thread_data_t *) malloc(sizeof(player_thread_data_t) * 200);
     init_traces(&gs);
 
     printf("Setup players structures\n");
     for (int i = 0; i < gs.n_players; i++) {
-      gs.pos[i] = (vecf_t) {.x = rand_lim(500), .y = rand_lim(400)};
+      gs.pos[i] = (vecf_t) {.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
       gs.players[i] = (player_t) {.id = i, .health = 100, .used_skill = -1, .stunned = 0 };
       ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false };
       gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
@@ -619,13 +658,22 @@ void run_match() {
             if (gs.meta[i].type == PLAYER) {
               gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
               gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
+              normalize(&gs.players[i].skill_dir);
 
-              if (gs.players[i].used_skill == 0) {
-                create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
-                gs.players[i].used_skill = -1;
+              switch (gs.players[i].used_skill) {
+                case 0: // SMALL PROJ
+                  create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
+                  gs.players[i].cd[0] = 30;
+                  break;
+                case 1: // DASH
+                  gs.pos[i].x += gs.players[i].skill_dir.x * 10;
+                  gs.pos[i].y += gs.players[i].skill_dir.y * 10;
+                  gs.players[i].cd[1] = 260;
+                  break;
               }
-
+              gs.players[i].used_skill = -1;
               gs.players[i].cd[0] -= 1;
+              gs.players[i].cd[1] -= 1;
 
               for (int j = i + 1; j < gs.active_entities; j++) {
                 if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
@@ -639,14 +687,14 @@ void run_match() {
 
               if (gs.pos[i].x < 0) {
                 gs.pos[i].x = 0;
-              } else if (gs.pos[i].x > 500) {
-                gs.pos[i].x = 500;
+              } else if (gs.pos[i].x > gs.w) {
+                gs.pos[i].x = gs.w;
               }
 
               if (gs.pos[i].y < 0) {
                 gs.pos[i].y = 0;
-              } else if (gs.pos[i].y > 500) {
-                gs.pos[i].y = 500;
+              } else if (gs.pos[i].y > gs.h) {
+                gs.pos[i].y = gs.h;
               }
 
               if (gs.players[i].health <= 0) {
@@ -657,7 +705,7 @@ void run_match() {
               gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED * 4;
               gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED * 4;
 
-              if (gs.pos[i].x < 0 || gs.pos[i].x > 500 || gs.pos[i].y < 0 || gs.pos[i].y > 500) {
+              if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 || gs.pos[i].y > gs.h) {
                 delete_entity(&gs, i);
               }
             }
