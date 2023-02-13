@@ -679,11 +679,12 @@ void run_match() {
                     if (i == j) {
                       continue;
                     }
-                    if (dist(&gs.pos[i], &gs.pos[j]) < MELEE_RANGE) {
-                      gs.players[j].health -= MELEE_DAMAGE;
+                    if (dist(&gs.pos[i], &gs.pos[j]) > MELEE_RANGE) {
+                      continue;
                     }
-                    gs.players[i].cd[2] = MELEE_COOLDOWN;
+                    gs.players[j].health -= MELEE_DAMAGE;
                   }
+                  gs.players[i].cd[2] = MELEE_COOLDOWN;
                   break;
               }
               gs.players[i].used_skill = -1;
