@@ -11,8 +11,9 @@
 #include <stdbool.h>
 #include <math.h>
 #include <yyjson.h>
+#include "coz.h"
 
-#define MMZ_GRAPHICS_SUPPORT 1
+#define MMZ_GRAPHICS_SUPPORT 0
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
@@ -21,7 +22,7 @@
 #define MAX_ENTITIES 5000
 #define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
-#define GAME_LENGTH 60 * 2
+#define GAME_LENGTH 60 * 10
 
 typedef enum {
     FREE,
@@ -146,7 +147,7 @@ float dist(const vecf_t *pos, const vecf_t *other) {
   float y = other->y - pos->y;
 
   if (x == 0 && y == 0) return 0.0f;
-  return abs(sqrtf(x*x + y*y));
+  return fabs(sqrtf(x*x + y*y));
 }
 
 typedef struct {
@@ -426,7 +427,8 @@ void call_bot_fn(lua_State *L, player_t *p, gamestate_t *gs, char *fn) {
       printf("error running function `%s`: %s", fn, lua_tostring(L, -1));
     }
 }
-
+  vecf_t pos[MAX_ENTITIES];
+  vecf_t dir[MAX_ENTITIES];
 void call_bot_main(lua_State *L, player_t *p, gamestate_t *gs) {
   call_bot_fn(L, p, gs, "bot_main");
 }
@@ -436,9 +438,13 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
 }
 
 void *player_thread(void *data) {
-  // From the Lua code you can access several stuff
-  // * your health
     char *program = "\
+function initialize (me)\n\
+  while (true)\n\
+  do\n\\
+	bot_main(me)\n\\
+  end\n\
+end\n\
 a = 0\n\
 my_pos = vec.new(0, 0)\n\
 dir = vec.new(1, 0)\n\
@@ -479,6 +485,7 @@ end\n";
     call_bot_init(L, this_player, gs);
 
     while (true) {
+		COZ_BEGIN("player_tick")
         pthread_mutex_lock(&inc_tick_cond_mut);
         while (ptd->curr_tick == tick) {
           pthread_cond_wait(&inc_tick_cond_var, &inc_tick_cond_mut);
@@ -497,6 +504,7 @@ end\n";
         pthread_mutex_unlock(&done_cond_mut);
 
         ptd->curr_tick += 1;
+		COZ_END("player_tick")
     }
     printf("DEAD PLAYER. EXITING THREAD...\n");
 }
@@ -620,6 +628,8 @@ void run_match() {
     printf("Created SDL renderer\n");
 #endif
 
+	COZ_BEGIN("game")
+
     player_thread_data_t *ptd = (player_thread_data_t *) malloc(sizeof(player_thread_data_t) * 200);
     init_traces(&gs);
 
@@ -630,6 +640,7 @@ void run_match() {
       ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false };
       gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
       pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
+	  COZ_PROGRESS
     }
 
     float curr_time = 0;
@@ -646,6 +657,7 @@ void run_match() {
                 done = done && ptd[i].done;
               }
             }
+			COZ_PROGRESS
         }
         pthread_mutex_unlock(&done_cond_mut);
 
@@ -670,10 +682,14 @@ void run_match() {
                   gs.pos[i].y += gs.players[i].skill_dir.y * 10;
                   gs.players[i].cd[1] = 260;
                   break;
+				case 2: // MELEE
+                  gs.players[i].cd[2] = 30;
+				  break;
               }
               gs.players[i].used_skill = -1;
               gs.players[i].cd[0] -= 1;
               gs.players[i].cd[1] -= 1;
+              gs.players[i].cd[2] -= 1;
 
               for (int j = i + 1; j < gs.active_entities; j++) {
                 if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
@@ -709,6 +725,7 @@ void run_match() {
                 delete_entity(&gs, i);
               }
             }
+			COZ_PROGRESS
         }
 
         update_traces(&gs);
@@ -742,6 +759,8 @@ void run_match() {
         tick += 1;
         pthread_cond_broadcast(&inc_tick_cond_var);
         pthread_mutex_unlock(&inc_tick_cond_mut);
+
+		COZ_PROGRESS
     }
 
     save_traces(&gs);
@@ -749,6 +768,8 @@ void run_match() {
     for (int i = 0; i < gs.n_players; i++) {
         pthread_cancel(gs.threads[i]);
     }
+
+	COZ_END("game")
 }
 
 int main(int argc, char **argv) {
