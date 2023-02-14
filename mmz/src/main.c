@@ -23,6 +23,9 @@
 #define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 10
+#define MELEE_RANGE 2.f
+#define MELEE_DAMAGE 20.f
+#define MELEE_COOLDOWN 50
 
 typedef enum {
     FREE,
@@ -462,6 +465,7 @@ function bot_main (me)\n\
   for _, ent in ipairs(entities) do\n\
     me:cast(0, ent:pos():sub(my_pos))\n\
     me:cast(1, ent:pos():sub(my_pos))\n\
+    me:cast(2, ent:pos():sub(my_pos))\n\
   end\n\
 end\n";
     player_thread_data_t *ptd = (player_thread_data_t *) data;
@@ -682,9 +686,18 @@ void run_match() {
                   gs.pos[i].y += gs.players[i].skill_dir.y * 10;
                   gs.players[i].cd[1] = 260;
                   break;
-				case 2: // MELEE
-                  gs.players[i].cd[2] = 30;
-				  break;
+                case 2: // MELEE
+                  for (int j = 0; j < gs.n_players; j++) {
+                    if (i == j) {
+                      continue;
+                    }
+                    if (dist(&gs.pos[i], &gs.pos[j]) > MELEE_RANGE) {
+                      continue;
+                    }
+                    gs.players[j].health -= MELEE_DAMAGE;
+                  }
+                  gs.players[i].cd[2] = MELEE_COOLDOWN;
+                  break;
               }
               gs.players[i].used_skill = -1;
               gs.players[i].cd[0] -= 1;
