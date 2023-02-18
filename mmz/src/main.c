@@ -18,13 +18,64 @@
 #include <SDL.h>
 #endif
 
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
 #define MAX_ENTITIES 5000
 #define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
+#define COD_COOLDOWN 30
+#define COD_SHRINK_TICKS 30
+#define COD_AREA 0.5f
 #define MELEE_RANGE 2.f
 #define MELEE_DAMAGE 20.f
 #define MELEE_COOLDOWN 50
+#define MAP_W 600
+#define MAP_H 500
+
+void DrawCircle(SDL_Renderer * renderer, int32_t centreX, int32_t centreY, int32_t radius)
+{
+   const int32_t diameter = (radius * 2);
+
+   int32_t x = (radius - 1);
+   int32_t y = 0;
+   int32_t tx = 1;
+   int32_t ty = 1;
+   int32_t error = (tx - diameter);
+
+   while (x >= y)
+   {
+      //  Each of the following renders an octant of the circle
+      SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
+      SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
+      SDL_RenderDrawPoint(renderer, centreX - x, centreY - y);
+      SDL_RenderDrawPoint(renderer, centreX - x, centreY + y);
+      SDL_RenderDrawPoint(renderer, centreX + y, centreY - x);
+      SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
+      SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
+      SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
+
+      if (error <= 0)
+      {
+         ++y;
+         error += ty;
+         ty += 2;
+      }
+
+      if (error > 0)
+      {
+         --x;
+         tx += 2;
+         error += (tx - diameter);
+      }
+   }
+}
 
 typedef enum {
     FREE,
@@ -65,6 +116,16 @@ typedef struct {
 } player_t;
 
 typedef struct {
+  int t_minus;
+  vecf_t pos;
+  vecf_t last_target_pos;
+  vecf_t target_pos;
+  float radius;
+  float last_target_radius;
+  float target_radius;
+} cod_t;
+
+typedef struct {
   enum entity_type type;
   int owner;
 } entity_metadata_t;
@@ -73,6 +134,7 @@ typedef struct {
   /* Entities */
   int n_players;
   player_t *players;
+  cod_t cod;
 
   vecf_t pos[MAX_ENTITIES];
   vecf_t dir[MAX_ENTITIES];
@@ -150,6 +212,10 @@ float dist(const vecf_t *pos, const vecf_t *other) {
 
   if (x == 0 && y == 0) return 0.0f;
   return abs(sqrtf(x*x + y*y));
+}
+
+float lerp(float s, float e, float t){
+  return s+(e-s)*t;
 }
 
 typedef struct {
@@ -598,14 +664,23 @@ void run_match() {
     pthread_cond_init(&inc_tick_cond_var, NULL);
     pthread_cond_init(&done_cond_var, NULL);
     printf("Initialized base condition vars\n");
-
+    float radius = sqrt(MAP_W*MAP_W + MAP_H*MAP_H)/2;
     gamestate_t gs = {
       .n_players = 200,
       .active_entities = 199,
       .players = (player_t *) malloc(sizeof(player_t) * 200),
+      .cod = (cod_t) {
+        .pos = (vecf_t) {.x = MAP_W/2.0f, .y = MAP_H/2.0f},
+        .last_target_pos = (vecf_t) {.x = MAP_W/2.0f, .y = MAP_H/2.0f},
+        .target_pos = (vecf_t) {.x = rand_lim(MAP_W), .y = rand_lim(MAP_H)},
+        .t_minus = COD_COOLDOWN,
+        .last_target_radius = radius,
+        .radius = radius,
+        .target_radius = sqrt(radius*radius*COD_AREA),
+      },
       .threads = (pthread_t *) malloc(sizeof(pthread_t) * 200),
-      .w = 600,
-      .h = 500,
+      .w = MAP_W,
+      .h = MAP_H,
       .dc_active = false,
     };
 
@@ -635,6 +710,8 @@ void run_match() {
       gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
       pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
     }
+
+    printf("Setup map structures\n");
 
     float curr_time = 0;
     printf("Starting match...\n");
@@ -704,7 +781,7 @@ void run_match() {
 
               if (gs.pos[i].x < 0) {
                 gs.pos[i].x = 0;
-              } else if (gs.pos[i].x > gs.w) {
+              } else if (gs.pos[i].x >  gs.w) {
                 gs.pos[i].x = gs.w;
               }
 
@@ -726,6 +803,41 @@ void run_match() {
                 delete_entity(&gs, i);
               }
             }
+        }
+        gs.cod.t_minus -= 1;
+        if (gs.cod.t_minus < 0) {
+          float completion = (float) -gs.cod.t_minus / COD_SHRINK_TICKS;
+          if(gs.cod.t_minus % 10 == 0) {
+            printf(
+              "completion %dt (%.0f%%) (%.1f, %.1f) -> (%.1f, %.1f) \n", 
+              gs.cod.t_minus, completion*100,
+              gs.cod.last_target_pos.x, gs.cod.last_target_pos.y,
+              gs.cod.target_pos.x, gs.cod.target_pos.y
+            );
+          }
+          if (completion >= 1.0f) {
+            printf("COD reached target (%.1f, %.1f) \n", gs.cod.target_pos.x, gs.cod.target_pos.y);
+            gs.cod.last_target_pos = gs.cod.target_pos;
+            gs.cod.last_target_radius = gs.cod.target_radius;
+            gs.cod.pos = gs.cod.target_pos;
+            gs.cod.radius = gs.cod.target_radius;
+            // Next COD
+            gs.cod.t_minus = COD_COOLDOWN;
+            float x_in_circle = gs.cod.target_pos.x + rand_lim(gs.cod.radius*2)-gs.cod.radius;
+            float y_in_circle = gs.cod.target_pos.y + rand_lim(gs.cod.radius*2)-gs.cod.radius;
+            gs.cod.target_pos.x = max(min(x_in_circle, MAP_W), 0);
+            gs.cod.target_pos.y = max(min(y_in_circle, MAP_H), 0);
+            gs.cod.target_radius = sqrt(gs.cod.radius*gs.cod.radius*COD_AREA);
+            printf(
+              "COD next target: (%.1f, %.1f) radius: %.1f\n",
+              gs.cod.target_pos.x, gs.cod.target_pos.y,
+              gs.cod.target_radius
+            );
+          } else {
+            gs.cod.pos.x = lerp(gs.cod.last_target_pos.x, gs.cod.target_pos.x, completion);
+            gs.cod.pos.y = lerp(gs.cod.last_target_pos.y, gs.cod.target_pos.y, completion);
+            gs.cod.radius = lerp(gs.cod.last_target_radius, gs.cod.target_radius, completion);
+          }
         }
 
         update_traces(&gs);
@@ -751,6 +863,11 @@ void run_match() {
           }
           SDL_RenderDrawPoint(renderer, gs.pos[i].x, gs.pos[i].y);
         }
+
+        SDL_SetRenderDrawColor(renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
+        DrawCircle(renderer, gs.cod.pos.x, gs.cod.pos.y, gs.cod.radius);
+        SDL_SetRenderDrawColor(renderer, 125, 125, 125, SDL_ALPHA_OPAQUE*0.5);
+        DrawCircle(renderer, gs.cod.target_pos.x, gs.cod.target_pos.y, gs.cod.target_radius);
 
         SDL_RenderPresent(renderer);
 #endif
