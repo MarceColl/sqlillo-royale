@@ -33,6 +33,7 @@
 #define COD_COOLDOWN 30
 #define COD_SHRINK_TICKS 30
 #define COD_AREA 0.5f
+#define COD_DAMAGE 1.f
 #define MELEE_RANGE 2.f
 #define MELEE_DAMAGE 20.f
 #define MELEE_COOLDOWN 50
@@ -718,6 +719,7 @@ void run_match() {
 
     while (curr_time <= GAME_LENGTH) {
         bool done = false;
+        bool sudden_death = gs.cod.radius < 5;
         pthread_mutex_lock(&done_cond_mut);
         while (!done) {
             pthread_cond_wait(&done_cond_var, &done_cond_mut);
@@ -779,6 +781,11 @@ void run_match() {
                 }
               }
 
+              // Outside of COD
+              if (dist(&gs.pos[i], &gs.cod.pos) > gs.cod.radius || sudden_death) {
+                gs.players[i].health -= COD_DAMAGE;
+              }
+
               if (gs.pos[i].x < 0) {
                 gs.pos[i].x = 0;
               } else if (gs.pos[i].x >  gs.w) {
@@ -804,7 +811,9 @@ void run_match() {
               }
             }
         }
-        gs.cod.t_minus -= 1;
+        if(!sudden_death) {
+          gs.cod.t_minus -= 1;
+        }
         if (gs.cod.t_minus < 0) {
           float completion = (float) -gs.cod.t_minus / COD_SHRINK_TICKS;
           if(gs.cod.t_minus % 10 == 0) {
@@ -863,11 +872,12 @@ void run_match() {
           }
           SDL_RenderDrawPoint(renderer, gs.pos[i].x, gs.pos[i].y);
         }
-
-        SDL_SetRenderDrawColor(renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
-        DrawCircle(renderer, gs.cod.pos.x, gs.cod.pos.y, gs.cod.radius);
-        SDL_SetRenderDrawColor(renderer, 125, 125, 125, SDL_ALPHA_OPAQUE*0.5);
-        DrawCircle(renderer, gs.cod.target_pos.x, gs.cod.target_pos.y, gs.cod.target_radius);
+        if (!sudden_death) {
+          SDL_SetRenderDrawColor(renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
+          DrawCircle(renderer, gs.cod.pos.x, gs.cod.pos.y, gs.cod.radius);
+          SDL_SetRenderDrawColor(renderer, 125, 125, 125, SDL_ALPHA_OPAQUE*0.5);
+          DrawCircle(renderer, gs.cod.target_pos.x, gs.cod.target_pos.y, gs.cod.target_radius);
+        }
 
         SDL_RenderPresent(renderer);
 #endif
