@@ -2,7 +2,7 @@ resources:
 - name: repo
   type: git
   source:
-    uri: https://oauth2:@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github.com/MarceColl/sqlillo-royale.git
+    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
 
 jobs:
 - name: sqlillo-royale
