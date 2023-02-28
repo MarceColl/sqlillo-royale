@@ -1,7 +1,7 @@
 DEBUG ?= 1
 TEST ?= 0
-CFLAGS := -g $(shell pkg-config --cflags luajit) $(shell pkg-config --cflags sdl2) -I./src
-LDFLAGS := -lpthread $(shell pkg-config --libs luajit) $(shell pkg-config --libs sdl2) -lm
+CFLAGS := -g $(shell pkg-config --cflags luajit) -I./src
+LDFLAGS := -lpthread $(shell pkg-config --libs luajit) -lm
 
 DBGDIR := ./out/dbg
 RELDIR := ./out/rel

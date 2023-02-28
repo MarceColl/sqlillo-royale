@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS accounts (
+	id SERIAL PRIMARY KEY,
+	username TEXT UNIQUE NOT NULL,
+	password TEXT NOT NULL
+);

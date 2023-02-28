@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS code (
+	account BIGINT NOT NULL,
+	code TEXT NOT NULL
+);
