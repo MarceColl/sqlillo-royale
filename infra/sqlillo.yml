@@ -1,0 +1,43 @@
+resources:
+- name: repo
+  type: git
+  source:
+    uri: https://oauth2:@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github.com/MarceColl/sqlillo-royale.git
+
+jobs:
+- name: sqlillo-royale
+  plan:
+  - get: repo
+    trigger: true
+  - task: build-runner
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: busybox
+      outputs:
+        - name: the-artifact
+      run:
+        path: sh
+        args:
+        - "-cx"
+        - |
+          ls -l .
+          echo "hello from another step!" > the-artifact/message
+  - task: build-frontend
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: busybox
+      inputs:
+      - name: the-artifact
+      run:
+        path: sh
+        args:
+        - "-cx"
+        - |
+          ls -l .
+          cat the-artifact/message
