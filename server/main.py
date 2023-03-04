@@ -10,6 +10,7 @@ from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
 
+
 app = FastAPI()
 
 SECRET = "asdf4321asdf4321"
