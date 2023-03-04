@@ -136,7 +136,7 @@ EOF
 	}
 
 	group "concourse-worker" {
-		count = 2
+		count = 3
 
 		task "worker" {
 			driver = "docker"

@@ -10,3 +10,13 @@ services:
       POSTGRES_PASSWORD: 'mmz'
       POSTGRES_USER: 'mmz'
       POSTGRES_DB: 'mmz'
+
+  server:
+    build: 
+      dockerfile: Dockerfile
+      context: ./server/
+    restart: always
+    ports: 
+      - "8000:8000"
+    environment:
+      DATABASE_URL: 'postgresql://mmz:mmz@db:5432'

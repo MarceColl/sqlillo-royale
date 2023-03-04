@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Marce Coll <marce@dziban.net>"]
 readme = "README.md"
-packages = [{include = "test_server"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"

@@ -16,7 +16,7 @@ SECRET = "asdf4321asdf4321"
 manager = LoginManager(SECRET, "/login")
 manager.useRequest(app)
 
-pool = ConnectionPool(os.getenv("DATABASE_URL", "postgresql://localhost:5432/mmz"))
+pool = ConnectionPool(os.getenv("DATABASE_URL", "postgresql://mmz:mzz@localhost:5432/mmz"))
 templates = Jinja2Templates(directory="templates")
 
 
