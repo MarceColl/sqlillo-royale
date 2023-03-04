@@ -1,50 +1,142 @@
+resource_types:
+  - name: nomad
+    type: registry-image
+    source:
+      repository: registry.digitalocean.com/dziban/concourse-nomad-resource
+      tag: latest
+      username: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+      password: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+
 resources:
-- name: repo
+- name: runner-src
   type: git
+  icon: git
   source:
     uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
+    paths:
+      - "mmz/*"
+- name: server-src
+  type: git
+  icon: git
+  source:
+    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
+    paths:
+      - "server/*"
+      - "canvas-renderer/*"
+- name: infra-src
+  type: git
+  icon: git
+  source:
+    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
+    paths:
+      - "infra/*"
+- name: server-image
+  type: registry-image
+  icon: docker
+  source:
+    repository: registry.digitalocean.com/dziban/sqlillo-server
+    tag: latest
+    username: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+    password: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+- name: runner-image
+  type: registry-image
+  icon: docker
+  source:
+    repository: registry.digitalocean.com/dziban/sqlillo-runner
+    tag: latest
+    username: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+    password: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
+- name: nomad
+  type: nomad
+  icon: server
+  source:
+    url: http://100.98.149.54:4646
+    name: dziban
 
 jobs:
 - name: build-server
   plan:
-  - get: repo
+  - get: server-src
     trigger: true
+
   - task: build-server
+    privileged: true
     config:
       platform: linux
+
       image_resource:
         type: registry-image
         source:
-          repository: quay.io/buildah/stable
+          repository: concourse/oci-build-task
+
       inputs:
-        - name: repo
+      - name: server-src
+        path: .
+
+      params:
+        CONTEXT: server
+
+      outputs:
+      - name: image
+
       run:
-        path: sh
-        args:
-        - "-cx"
-        - |
-          pacman -Syu --noconfirm
-          pacman -S buildah --noconfirm
-          cd repo/server
-          ls -l .
-          buildah build --isolation=chroot -f Dockerfile -t sqlillo-royale-server:latest .
+        path: build
+
+  - put: server-image
+    params: {image: image/image.tar}
 
 - name: build-runner
   plan:
-  - get: repo
+  - get: runner-src
+    params:
+      version: latest
     trigger: true
-  - task: build-frontend
+
+  - task: build-server
+    privileged: true
     config:
       platform: linux
+
       image_resource:
         type: registry-image
         source:
-          repository: quay.io/buildah/stable
+          repository: concourse/oci-build-task
+
+      inputs:
+      - name: runner-src
+        path: .
+
+      params:
+        CONTEXT: mmz
+
+      outputs:
+      - name: image
+
       run:
-        path: sh
-        args:
-        - "-cx"
-        - |
-          pacman -Syu --noconfirm
-          pacman -S buildah --noconfirm
-          ls -l .
+        path: build
+
+  - put: runner-image
+    params: {image: image/image.tar}
+
+- name: deploy-runner
+  plan:
+  - get: infra-src
+    trigger: true
+  - get: runner-image
+    trigger: true
+
+  - put: nomad
+    params:
+      job_path: infra-src/infra/runner.nomad
+
+- name: deploy-server
+  plan:
+  - get: infra-src
+    trigger: true
+  - get: server-image
+    trigger: true
+
+  - put: nomad
+    params:
+      job_path: infra-src/infra/sqlillo.nomad
+
