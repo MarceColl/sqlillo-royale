@@ -66,8 +66,13 @@ EOF
 			}
 
 			config {
-				image = "docker://chentex/go-rest-api"
-				ports = ["web"]
+					image = "registry.digitalocean.com/dziban/sqlillo-server:latest"
+					force_pull = true
+
+					  auth {
+						username = "dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9"
+						password = "dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9"
+					  }
 			}
 		}
 

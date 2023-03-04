@@ -46,12 +46,18 @@ resources:
     tag: latest
     username: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
     password: dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9
-- name: nomad
+- name: runner-deploy
   type: nomad
   icon: server
   source:
     url: http://100.98.149.54:4646
-    name: dziban
+    name: runner
+- name: server-deploy
+  type: nomad
+  icon: server
+  source:
+    url: http://100.98.149.54:4646
+    name: sqlillo-royale
 
 jobs:
 - name: build-server
@@ -125,8 +131,9 @@ jobs:
   - get: runner-image
     trigger: true
 
-  - put: nomad
+  - put: runner-deploy
     params:
+      name: runner
       job_path: infra-src/infra/runner.nomad
 
 - name: deploy-server
@@ -136,7 +143,8 @@ jobs:
   - get: server-image
     trigger: true
 
-  - put: nomad
+  - put: server-deploy
     params:
+      name: sqlillo-royale
       job_path: infra-src/infra/sqlillo.nomad
 
