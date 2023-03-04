@@ -12,6 +12,7 @@
 #include <math.h>
 #include <yyjson.h>
 
+
 #define MMZ_GRAPHICS_SUPPORT 0
 
 #if MMZ_GRAPHICS_SUPPORT
