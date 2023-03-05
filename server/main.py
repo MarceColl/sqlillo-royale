@@ -10,14 +10,16 @@ from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 
 
-
 app = FastAPI()
 
 SECRET = "asdf4321asdf4321"
 manager = LoginManager(SECRET, "/login")
 manager.useRequest(app)
 
-pool = ConnectionPool(os.getenv("DATABASE_URL", "postgresql://mmz:mzz@localhost:5432/mmz"))
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://sqlillo:sqlillo@localhost:5432/sqlillo")
+
+print("DATABASE_URL", DATABASE_URL)
+pool = ConnectionPool(DATABASE_URL)
 templates = Jinja2Templates(directory="templates")
 
 
