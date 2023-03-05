@@ -9,3 +9,4 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-cache --no-interaction
 RUN poetry run playwright install
+RUN poetry run playwright install-deps
