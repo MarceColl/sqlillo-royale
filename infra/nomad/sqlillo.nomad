@@ -57,7 +57,7 @@ job "sqlillo-royale" {
 			template {
 				data = <<EOF
 {{- range nomadService "postgres-sqlillo" }}
-DATABASE_URL="postgresql://sqlillo:sqlillo@{{- .Address -}}:{{- .Port -}}/sqlillo
+DATABASE_URL="postgresql://sqlillo:sqlillo@{{- .Address -}}:{{- .Port -}}/sqlillo"
 {{- end }}
 EOF
 				destination = "env/secrets.env"
