@@ -64,30 +64,25 @@ jobs:
   plan:
   - get: server-src
     trigger: true
-
   - task: build-server
     privileged: true
     config:
       platform: linux
-
       image_resource:
         type: registry-image
         source:
           repository: concourse/oci-build-task
-
       inputs:
       - name: server-src
         path: .
-
       params:
         CONTEXT: server
-
       outputs:
       - name: image
-
+      caches:
+      - path: cache
       run:
         path: build
-
   - put: server-image
     params: {image: image/image.tar}
 
@@ -97,27 +92,23 @@ jobs:
     params:
       version: latest
     trigger: true
-
   - task: build-server
     privileged: true
     config:
       platform: linux
-
       image_resource:
         type: registry-image
         source:
           repository: concourse/oci-build-task
-
       inputs:
       - name: runner-src
         path: .
-
       params:
         CONTEXT: mmz
-
       outputs:
       - name: image
-
+      caches:
+      - path: cache
       run:
         path: build
 
