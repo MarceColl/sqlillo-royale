@@ -8,4 +8,4 @@ RUN /root/.local/bin/poetry config virtualenvs.create false
 COPY ./ ./
 RUN /root/.local/bin/poetry install --no-cache --no-interaction
 
-ENTRYPOINT ["uvicorn", "main:app"]
+ENTRYPOINT ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
