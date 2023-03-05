@@ -28,7 +28,7 @@ job "sqlillo-royale" {
 			}
 
 			config {
-				image = "docker://postgres:14.7"
+				image = "postgres:14.7"
 				ports = ["db"]
 			}
 
@@ -73,6 +73,12 @@ EOF
 						password = "dop_v1_f52f933c8c9724ea38c6505bddc0c8245a0ba4eb0b3c9ff2891f4e432c179ef9"
 					  }
 			}
+
+			service {
+				name = "sqlillo"
+				provider = "nomad"
+				port = "web"
+			}
 		}
 
 		network {
@@ -83,7 +89,7 @@ EOF
 			}
 
 			port "web" {
-				to = 8080
+				to = 8000
 			}
 		}
 	}
