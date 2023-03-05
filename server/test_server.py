@@ -2,6 +2,7 @@ import re
 from playwright.sync_api import Page, expect
 
 def test_homepage(page: Page):
+    print("HOLA")
     page.goto("https://playwright.dev/")
     expect(page).to_have_title(re.compile("Playwright"))
     get_started = page.get_by_role("link", name="Get started")
