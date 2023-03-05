@@ -3,7 +3,6 @@ name = "test-server"
 version = "0.1.0"
 description = ""
 authors = ["Marce Coll <marce@dziban.net>"]
-readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
