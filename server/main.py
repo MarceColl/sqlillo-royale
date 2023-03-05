@@ -16,7 +16,7 @@ SECRET = "asdf4321asdf4321"
 manager = LoginManager(SECRET, "/login")
 manager.useRequest(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://sqlillo:sqlillo@localhost:5432/sqlillo")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://mmz:mmz@localhost:5432/mmz")
 
 print("DATABASE_URL", DATABASE_URL)
 pool = ConnectionPool(DATABASE_URL)
