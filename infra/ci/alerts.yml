@@ -1,0 +1,49 @@
+---
+resource_types:
+- name: telegram-notification
+  type: docker-image
+  source:
+    repository: w32blaster/concourse-telegram-notifier
+    tag: latest
+
+task-config: &task-config
+  platform: linux
+  image_resource:
+    type: registry-image
+    source:
+      repository: archlinux
+
+resources:
+- name: "minute-timer"
+  type: time
+  icon: clock
+  source: {interval: 1m}
+- name: telegram-notification
+  type: telegram-notification
+  icon: telegram
+  source:
+    bot_token: "6106421067:AAHqeLY_ijG4xHZl9jQIcNrQDJs5HpJIO2Y"
+
+jobs:
+- name: check-api
+  plan:
+  - get: minute-timer
+    trigger: true
+
+  - task: check-api
+    config:
+      << : *task-config
+      run:
+        path: sh
+        args:
+        - "-cx"
+        - |
+          curl -f -LI http://100.98.149.54:8000
+    on_failure:
+      put: telegram-notification
+      params:
+        chat_id: "741267564"
+        text: "SQLILLO web is down"
+        parse_mode: HTML
+          
+

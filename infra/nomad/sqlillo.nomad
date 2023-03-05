@@ -19,7 +19,7 @@ job "sqlillo-royale" {
 		}
 
 		task "postgres" {
-			driver = "podman"
+			driver = "docker"
 
 			volume_mount {
 				volume = "postgres_sqlillo"
@@ -52,7 +52,7 @@ job "sqlillo-royale" {
 		}
 
 		task "web" {
-			driver = "podman"
+			driver = "docker"
 
 			template {
 				data = <<EOF
