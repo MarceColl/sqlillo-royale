@@ -1,3 +1,11 @@
+---
+git-base: &git-base
+  type: git
+  icon: git
+  check_every: "10s"
+  source:
+    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
+
 resource_types:
   - name: nomad
     type: registry-image
@@ -9,25 +17,19 @@ resource_types:
 
 resources:
 - name: runner-src
-  type: git
-  icon: git
+  << : *git-base
   source:
-    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
     paths:
       - "mmz/*"
 - name: server-src
-  type: git
-  icon: git
+  << : *git-base
   source:
-    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
     paths:
       - "server/*"
       - "canvas-renderer/*"
 - name: infra-src
-  type: git
-  icon: git
+  << : *git-base
   source:
-    uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
     paths:
       - "infra/*"
 - name: server-image
@@ -125,7 +127,7 @@ jobs:
   - put: runner-deploy
     params:
       name: runner
-      job_path: infra-src/infra/runner.nomad
+      job_path: infra-src/infra/nomad/runner.nomad
 
 - name: deploy-server
   plan:
@@ -137,5 +139,5 @@ jobs:
   - put: server-deploy
     params:
       name: sqlillo-royale
-      job_path: infra-src/infra/sqlillo.nomad
+      job_path: infra-src/infra/nomad/sqlillo.nomad
 
