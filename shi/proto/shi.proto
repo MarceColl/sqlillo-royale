@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package shi;
+
+service ShiService {
+  rpc getUsers (UsersRequest) returns (UsersResponse) {}
+  rpc update (UpdateRequest) returns (WriteStatus) {}
+}
+
+message UsersRequest {
+
+}
+
+message FieldUpdate {
+  string field = 1;
+  oneof value {
+    string str = 2;
+    int64 int = 3;
+    bytes byte = 4;
+  }
+}
+
+message UpdateRequest {
+  string schema = 1;
+  string id = 2;
+  repeated FieldUpdate updates = 3;
+}
+
+message User {
+  string id = 1;
+  string code = 2;
+}
+
+message UsersResponse {
+  repeated User users = 1;
+}
+
+message UpdateCodeRequest {
+  string id = 1;
+  string code = 2;
+}
+
+enum WriteOutcome {
+  WRITE_OUTCOME_SUCCESS = 0;
+  WRITE_OUTCOME_FAILURE = 1;
+  WRITE_OUTCOME_UNKNOWN_SCHEMA = 2;
+}
+
+message WriteStatus {
+  WriteOutcome outcome = 1;
+}
