@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate lazy_static;
 
-use rocksdb::{OptimisticTransactionDB, WriteBatchWithTransaction, DB};
+use rocksdb::{OptimisticTransactionDB, WriteBatchWithTransaction, DB, SliceTransform, Options};
 use schema::{DBValue, UserUpdate, UserUpdates};
 use shi_server::shi_service_server::{ShiService, ShiServiceServer};
 use shi_server::{
-    UpdateCodeRequest, UpdateRequest, User, UsersRequest, UsersResponse, WriteOutcome, WriteStatus,
+    UpdateRequest, User, UsersRequest, UsersResponse, WriteOutcome, WriteStatus,
 };
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -22,9 +22,34 @@ pub struct Shi {
 impl Shi {
     pub fn new() -> Self {
         let path = "shi_db";
+	let prefix_extractor = SliceTransform::create("path_prefix", index_prefix_extractor, None);
+	let mut opts = Options::default();
+	opts.create_if_missing(true);
+	opts.set_prefix_extractor(prefix_extractor);
+
         Shi {
-            db: OptimisticTransactionDB::open_default(path).unwrap(),
+            db: OptimisticTransactionDB::open(&opts, &path).unwrap(),
         }
+    }
+}
+
+fn get_index(v: &str, occurrence: usize, value: char) -> Option<usize> {
+    v.chars()
+        .enumerate()
+        .filter(|(_, v)| *v == value)
+        .map(|(i, _)| i)
+        .nth(occurrence - 1)
+}
+
+fn index_prefix_extractor(k: &[u8]) -> &[u8] {
+    let str = String::from_utf8(k.to_vec()).unwrap();
+    match get_index(str.as_str(), 3, '/') {
+	Some(idx) => {
+	    &k[..idx]
+	},
+	None => {
+	    k
+	}
     }
 }
 
@@ -35,7 +60,7 @@ impl ShiService for Shi {
         _request: Request<UsersRequest>,
     ) -> Result<Response<UsersResponse>, Status> {
         let mut users = vec![];
-        let code_iter = self.db.prefix_iterator(b"//code");
+        let code_iter = self.db.prefix_iterator(b"//index@code/");
 
         for item in code_iter {
             let (key, value) = item.unwrap();
@@ -67,7 +92,6 @@ impl ShiService for Shi {
             }
         };
 
-        println!("{:?}", &req.updates);
         let updates_list = &req.updates;
         let mut ul = vec![];
 
@@ -84,16 +108,29 @@ impl ShiService for Shi {
             id: "Testillo".to_string(),
             updates: ul,
         };
-        schema::update(&tx, schema, &updates).unwrap();
+        match schema::update(&tx, schema, &updates) {
+	    Ok(_) => {
+		let outcome = match tx.commit() {
+		    Ok(()) => WriteOutcome::Success,
+		    Err(_) => WriteOutcome::Failure,
+		};
 
-        let outcome = match tx.commit() {
-            Ok(()) => WriteOutcome::Success,
-            Err(_) => WriteOutcome::Failure,
-        };
+		Ok(Response::new(WriteStatus {
+		    outcome: outcome.into(),
+		}))
+	    },
+	    Err(_) => {
+		let outcome = match tx.rollback() {
+		    Ok(_) => WriteOutcome::InternalError,
+		    Err(_) => WriteOutcome::InternalError,
+		};
 
-        Ok(Response::new(WriteStatus {
-            outcome: outcome.into(),
-        }))
+		Ok(Response::new(WriteStatus {
+		    outcome: outcome.into(),
+		}))
+	    }
+	}
+
     }
 }
 

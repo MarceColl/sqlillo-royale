@@ -85,12 +85,12 @@ lazy_static! {
             UserField::Code,
             SchemaFieldDef {
                 name: "code",
-                index: Some(SchemaIndexDef { prefix: "//code" }),
+                index: Some(SchemaIndexDef { prefix: "//index@code" }),
             },
         );
 
         Schema {
-            prefix: "//user",
+            prefix: "//table@user",
             id: UserField::Id,
             fields: m,
         }
