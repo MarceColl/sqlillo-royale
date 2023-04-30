@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"os"
 
 	"log"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
-	"github.com/uptrace/bun/extra/bundebug"
 )
 
 type Api struct {
@@ -19,13 +19,18 @@ type Api struct {
 // NewAPI tries to create a new Api instance, if some step
 // fails it panics
 func NewAPI() *Api {
-	// TODO: From env
 	dsn := "postgresql://mmz:mmz@localhost:5432/sqlillo?sslmode=disable"
+
+	if dsnFromEnv := os.Getenv("DATABASE_URL"); dsnFromEnv != "" {
+		dsn = dsnFromEnv
+	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
 
 	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+
+	// For logging purposes
+	// db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
 
 	ctx := context.Background()
 
@@ -51,14 +56,18 @@ func CreateSchema(ctx context.Context, db *bun.DB) error {
 		(*Code)(nil),
 	}
 
+	// Needed for the many-to-many relationship
+	// between users and games
 	db.RegisterModel((*GameToUser)(nil))
 
 	for i, model := range models {
-		log.Printf("Created model %d\n", i)
+		_, err := db.NewCreateTable().Model(model).IfNotExists().WithForeignKeys().Exec(ctx)
 
-		if _, err := db.NewCreateTable().Model(model).IfNotExists().WithForeignKeys().Exec(ctx); err != nil {
+		if err != nil {
 			return err
 		}
+
+		log.Printf("Created model '%v'\n", i)
 	}
 
 	log.Printf("%d tables created!\n", len(models))

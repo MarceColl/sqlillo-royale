@@ -1,14 +1,35 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO: From env
-var SIGN_KEY []byte = []byte("AllYourBase")
+// SIGN_KEY is a singleton that will be set
+// by the `GetSignKey` func on the first request
+// i.e. lazy loaded
+var SIGN_KEY []byte
+
+// GetSignKey returns the sign key
+func GetSignKey() []byte {
+	if len(SIGN_KEY) > 0 {
+		return SIGN_KEY
+	}
+
+	// Default for testing purposes
+	signKey := []byte("KmJ6#pX4bTDf##Oy7lA7Iogj*#JhDBthW(WOSKiUJU")
+
+	if signKeyFromEnv := os.Getenv("SIGN_KEY"); signKeyFromEnv != "" {
+		signKey = []byte(signKeyFromEnv)
+	}
+
+	SIGN_KEY = signKey
+
+	return SIGN_KEY
+}
 
 type JWTClaims struct {
 	Username string `json:"username"`
@@ -31,7 +52,7 @@ func (u *User) CheckPass(pass string) bool {
 // the custom JWT claim
 func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return SIGN_KEY, nil
+		return GetSignKey(), nil
 	})
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
@@ -54,5 +75,5 @@ func (u *User) NewToken() (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString(SIGN_KEY)
+	return token.SignedString(GetSignKey())
 }
