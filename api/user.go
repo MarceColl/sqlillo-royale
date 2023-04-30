@@ -1,38 +1,43 @@
 package main
 
 import (
-	jwt "github.com/golang-jwt/jwt/v5"
 	"time"
+
+	jwt "github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
+// TODO: From env
 var SIGN_KEY []byte = []byte("AllYourBase")
 
 type JWTClaims struct {
-	User *User `json:"user"`
+	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
-// CheckPass of the user
+// CheckPass of the user password
 func (u *User) CheckPass(pass string) bool {
-	// TODO: Validate hash
-	if pass == u.PasswordHash {
-		return true
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(u.PasswordHash),
+		[]byte(pass),
+	); err != nil {
+		return false
 	}
 
-	return false
+	return true
 }
 
 // ParseToken tries to parse a JWT string into
 // the custom JWT claim
-func ParseToken(tokenString string) (*User, error) {
+func ParseToken(tokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return SIGN_KEY, nil
 	})
 
 	if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-		return claims.User, nil
+		return claims.Username, nil
 	} else {
-		return nil, err
+		return "", err
 	}
 }
 
@@ -40,7 +45,7 @@ func ParseToken(tokenString string) (*User, error) {
 // The default expiration is 24 hours, because why not
 func (u *User) NewToken() (string, error) {
 	claims := JWTClaims{
-		u,
+		u.Username,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			Issuer:    "sqlillo",

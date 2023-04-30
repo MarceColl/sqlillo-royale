@@ -1,12 +1,18 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-// HealthHandler is a simpel handler for
-// healthcheck purposes
-func HealthHandler(c *fiber.Ctx) error {
+// HealthHandler is a simpel handler for healthcheck purposes
+func (api *Api) HealthHandler(c *fiber.Ctx) error {
+	if err := api.db.Ping(); err != nil {
+		log.Printf("[ERROR] Healthcheck ping failure: %v\n", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
 	return c.SendString("SQLillo Royale!")
 }
 
