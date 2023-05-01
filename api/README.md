@@ -6,7 +6,8 @@
 
 1. Have `go` installed
 2. `go get`
-3. `go run .`
-4. Enjoy the API at port `localhost:3000`
-5. (Optional) Install [`air`](https://github.com/cosmtrek/air) for hot reload
+3. Make sure Postgres is running at port `5432`
+4. `go run .`
+5. Enjoy the API at port `localhost:8000`
+6. (Optional) Install [`air`](https://github.com/cosmtrek/air) for hot reload
     1. Run `air`
