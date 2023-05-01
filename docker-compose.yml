@@ -9,14 +9,22 @@ services:
     environment:
       POSTGRES_PASSWORD: 'mmz'
       POSTGRES_USER: 'mmz'
-      POSTGRES_DB: 'mmz'
+      POSTGRES_DB: 'sqlillo'
+    networks:
+      - common
 
   server:
     build: 
       dockerfile: Dockerfile
-      context: ./server/
+      context: ./api/
     restart: always
     ports: 
       - "8000:8000"
     environment:
-      DATABASE_URL: 'postgresql://mmz:mmz@db:5432'
+      PORT: "8000"
+      DATABASE_URL: 'postgresql://mmz:mmz@db:5432/sqlillo?sslmode=disable'
+    networks:
+      - common
+
+networks:
+  common: {}
