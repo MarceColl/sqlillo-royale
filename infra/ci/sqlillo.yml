@@ -31,7 +31,7 @@ resources:
   source:
     uri: https://oauth2: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@github.com/MarceColl/sqlillo-royale.git
     paths:
-      - "server/*"
+      - "sqlillo/*"
       - "canvas-renderer/*"
 - name: infra-src
   type: git
@@ -87,7 +87,7 @@ jobs:
       - name: server-src
         path: .
       params:
-        CONTEXT: server
+        CONTEXT: sqlillo
       outputs:
       - name: image
       caches:
