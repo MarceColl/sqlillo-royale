@@ -33,8 +33,8 @@ typedef struct keyword_mapping {
 
 const keyword_mapping_t kw_map[] = {
   { .str = "if", .len = 2, .type = TT_KW_IF },
-  { .str = "while", .len = 2, .type = TT_KW_WHILE },
-  { .str = "for", .len = 2, .type = TT_KW_FOR },
+  { .str = "while", .len = 5, .type = TT_KW_WHILE },
+  { .str = "for", .len = 3, .type = TT_KW_FOR },
   { .str = NULL, .len = 0, .type = TT_NONE },
 };
 
