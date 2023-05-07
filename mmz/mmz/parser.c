@@ -95,6 +95,8 @@ void parser_init(parser_t *parser, char* code) {
   SYMBOL(TT_LPAREN, 90)->led = &lparen_call_led; // Call syntax
 
   SYMBOL(TT_KW_IF, 0)->fud = &if_fud;
+  SYMBOL(TT_KW_WHILE, 0)->fud = &if_fud; // TODO(Marce): while fud
+  SYMBOL(TT_KW_FOR, 0)->fud = &if_fud; // TODO(Marce): for fud
 
   INFIX(TT_ADD, 60);
   PREFIX(TT_ADD, 60);

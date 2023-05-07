@@ -3,7 +3,7 @@
 
 TEST(parser_basic_expr) {
   parser_t p;
-  ast_node_t *ast = parse(&p, "a = -57298*8+10*12 + fun(1 + b, 4, t); b = 12; c = 14; if (a) { 1 + 2; 3 + 4; }");
+  ast_node_t *ast = parse(&p, "a = -57298*8+10*12 + fun(1 + b, 4, t); b = 12; c = 14; while (a) { 1 + 2; 3 + 4; }");
   printf("AST: %p\n", ast);
   print_ast(ast, 0);
 

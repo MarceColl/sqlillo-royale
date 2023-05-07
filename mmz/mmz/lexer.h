@@ -24,6 +24,8 @@ typedef enum token_type {
 
   // Keywords
   TT_KW_IF,
+  TT_KW_WHILE,
+  TT_KW_FOR,
   
   TT_EOF,
 
