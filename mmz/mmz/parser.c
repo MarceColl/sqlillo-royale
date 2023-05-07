@@ -56,6 +56,7 @@ ast_node_t *literal_nud(parser_t *parser, ast_node_t *this);
 ast_node_t *lparen_group_nud(parser_t *parser, ast_node_t *this);
 ast_node_t *lparen_call_led(parser_t *parser, ast_node_t *this, ast_node_t *left);
 ast_node_t *if_fud(parser_t *parser, ast_node_t *this);
+ast_node_t *while_fud(parser_t *parser, ast_node_t *this);
 
 ast_node_t* ast_node_from_token(parser_t *parser, token_t *token) {
   if (token->type == TT_EOF) {
@@ -95,7 +96,7 @@ void parser_init(parser_t *parser, char* code) {
   SYMBOL(TT_LPAREN, 90)->led = &lparen_call_led; // Call syntax
 
   SYMBOL(TT_KW_IF, 0)->fud = &if_fud;
-  SYMBOL(TT_KW_WHILE, 0)->fud = &if_fud; // TODO(Marce): while fud
+  SYMBOL(TT_KW_WHILE, 0)->fud = &while_fud;
   SYMBOL(TT_KW_FOR, 0)->fud = &if_fud; // TODO(Marce): for fud
 
   INFIX(TT_ADD, 60);
@@ -283,6 +284,14 @@ ast_node_t *if_fud(parser_t *parser, ast_node_t *this) {
   return this;
 }
 
+ast_node_t *while_fud(parser_t *parser, ast_node_t *this) {
+  advance(parser->l, TT_LPAREN);
+  this->left = expression(parser, 0);
+  advance(parser->l, TT_RPAREN);
+  this->right = block(parser);
+  this->arity = 0;
+  return this;
+}
 
 /**
  * Initialize or find a symbol in the symbol table
