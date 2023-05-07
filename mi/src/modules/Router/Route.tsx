@@ -1,7 +1,8 @@
-import { PathParams } from "@/Routes";
+import { useRouter } from "./hooks";
+import { PathParams } from "./types";
 
 type Props<T extends string> = {
-  children: JSX.Element | ((vars: PathParams<T>) => JSX.Element);
+  children: React.ReactNode | ((vars: PathParams<T>) => React.ReactNode);
   path: T;
 };
 
@@ -28,6 +29,7 @@ type Props<T extends string> = {
  * ```
  */
 const Route = <T extends string>({ children, path }: Props<T>) => {
+  const { path: currentPathname } = useRouter();
   const parts = path.split("/");
   const variables = Object.fromEntries(
     parts
@@ -36,15 +38,16 @@ const Route = <T extends string>({ children, path }: Props<T>) => {
       .map(([i, p]) => [i, p.slice(1)])
   );
 
-  const matcher = parts
+  const urlMatcher = parts
     .map((p, i) => (i in variables ? `(?<${variables[i]}>[^/]+)` : p))
-    .join("/");
+    .join("\\/");
+  const matcher = new RegExp(`^${urlMatcher}$`);
 
-  const match = window.location.pathname.match(matcher);
+  const match = currentPathname.match(matcher);
   if (!match) return null;
   const values = match.groups as PathParams<T>;
 
-  return typeof children === "function" ? children(values) : children;
+  return <>{typeof children === "function" ? children(values) : children}</>;
 };
 
-export default Route;
+export { Route };
