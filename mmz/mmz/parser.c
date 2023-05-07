@@ -34,7 +34,7 @@ typedef struct token_def {
   enum token_type id;
   ast_node_t* (*nud)(parser_t *parser, ast_node_t *this);
   ast_node_t* (*led)(parser_t *parser, ast_node_t *this, ast_node_t *left);
-  ast_node_t* (*fud)(parser_t *parser);
+  ast_node_t* (*fud)(parser_t *parser, ast_node_t *this);
   void (*error)(ast_node_t *this, char *msg);
   int lbp;
 } token_def_t;
@@ -55,6 +55,7 @@ ast_node_t* prefix_nud(parser_t *parser, ast_node_t *this);
 ast_node_t *literal_nud(parser_t *parser, ast_node_t *this);
 ast_node_t *lparen_group_nud(parser_t *parser, ast_node_t *this);
 ast_node_t *lparen_call_led(parser_t *parser, ast_node_t *this, ast_node_t *left);
+ast_node_t *if_fud(parser_t *parser, ast_node_t *this);
 
 ast_node_t* ast_node_from_token(parser_t *parser, token_t *token) {
   if (token->type == TT_EOF) {
@@ -92,6 +93,8 @@ void parser_init(parser_t *parser, char* code) {
   // Grouping with parenthesis
   // SYMBOL(TT_LPAREN, 0)->nud = &lparen_group_nud;
   SYMBOL(TT_LPAREN, 90)->led = &lparen_call_led; // Call syntax
+
+  SYMBOL(TT_KW_IF, 0)->fud = &if_fud;
 
   INFIX(TT_ADD, 60);
   PREFIX(TT_ADD, 60);
@@ -178,8 +181,9 @@ ast_node_t *statement(parser_t *parser) {
   token_def_t *curr_tok_def = &parser->symbol_table[parser->l->token.type];
 
   if (curr_tok_def->fud) {
+    ast_node_t *tok = ast_node_from_token(parser, &parser->l->token);
     advance(parser->l, TT_NONE);
-    return curr_tok_def->fud(parser);
+    return curr_tok_def->fud(parser, tok);
   }
   exp = expression(parser, 0);
   advance(parser->l, TT_SEMICOLON);
@@ -265,6 +269,15 @@ ast_node_t *lparen_call_led(parser_t *parser, ast_node_t *this, ast_node_t *left
   this->left = left;
   this->right = comma_separated_expressions(parser);
   advance(parser->l, TT_RPAREN);
+  return this;
+}
+
+ast_node_t *if_fud(parser_t *parser, ast_node_t *this) {
+  advance(parser->l, TT_LPAREN);
+  this->left = expression(parser, 0);
+  advance(parser->l, TT_RPAREN);
+  this->right = block(parser);
+  this->arity = 0;
   return this;
 }
 
