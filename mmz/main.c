@@ -45,7 +45,7 @@ enum entity_type {
 
 #define NUM_SKILLS 4
 
-int tick = 0;
+int tick = -1;
 pthread_cond_t inc_tick_cond_var;
 pthread_mutex_t inc_tick_cond_mut;
 pthread_cond_t done_cond_var;
@@ -641,9 +641,26 @@ void run_match() {
     printf("Starting match...\n");
 
     while (curr_time <= GAME_LENGTH) {
+        pthread_mutex_lock(&inc_tick_cond_mut);
+        tick += 1;
+
         bool done = false;
         pthread_mutex_lock(&done_cond_mut);
+
+        // Now that we have the done mutex locked
+        // we can broadcast and unlock the tick mut.
+        // This will unblock all the player
+        // threads that were waiting for the next tick.
+        pthread_cond_broadcast(&inc_tick_cond_var);
+        pthread_mutex_unlock(&inc_tick_cond_mut);
+
         while (!done) {
+            // Here we wait for the threads to send done conditions.
+            
+            // NOTE(taras)
+            // I think here there could be a case that all the players
+            // finish before we call on this wait, which would
+            // yield into a new race cond (?)
             pthread_cond_wait(&done_cond_var, &done_cond_mut);
             done = true;
             for (int i = 0; i < gs.n_players; i++) {
@@ -755,18 +772,17 @@ void run_match() {
 
         SDL_RenderPresent(renderer);
 #endif
-
-        pthread_mutex_lock(&inc_tick_cond_mut);
-        tick += 1;
-        pthread_cond_broadcast(&inc_tick_cond_var);
-        pthread_mutex_unlock(&inc_tick_cond_mut);
     }
 
     save_traces(&gs);
 
+    printf("Traces saved!\n");
+
     for (int i = 0; i < gs.n_players; i++) {
         pthread_cancel(gs.threads[i]);
     }
+
+    printf("Exiting...\n");
 }
 
 int main(int argc, char **argv) {
