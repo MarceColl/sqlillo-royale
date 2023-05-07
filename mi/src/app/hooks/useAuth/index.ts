@@ -12,8 +12,11 @@ type Actions = {
 };
 
 const useAuthStore = create<State & Actions>()((set) => ({
-  token: null,
-  setToken: (token: string | null) => set({ token }),
+  token: localStorage.getItem("token"),
+  setToken: (token: string | null) => {
+    localStorage.setItem("token", token || "");
+    set({ token });
+  },
 }));
 
 export const useAuth = () => {
