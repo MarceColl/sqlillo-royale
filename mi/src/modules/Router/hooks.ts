@@ -17,13 +17,15 @@ export const useRouterStore = create<RouterStore>()((set) => ({
 type GoToInput<T extends string> =
   | {
       path: T;
-      urlParams?: PathParams<T>;
+      params?: PathParams<T>;
       state?: Record<string, unknown>;
     }
   | string;
 
 const useRouter = () => {
   const pushState = (...args: Parameters<typeof window.history.pushState>) => {
+    // No idea what am I doing, but looks like it works
+    window.dispatchEvent(new Event("popstate"));
     window.history.pushState(...args);
     window.dispatchEvent(new Event("popstate"));
   };
@@ -33,8 +35,8 @@ const useRouter = () => {
         pushState({}, "", input);
         return;
       }
-      const { path, urlParams, state } = input;
-      pushState(state, "", build(path, urlParams));
+      const { path, params, state } = input;
+      pushState(state, "", build(path, params));
     },
     state: <T extends Record<string, unknown>>() => window.history.state as T,
     path: useRouterStore((state) => state.path),
