@@ -35,6 +35,8 @@ pthread_mutex_t inc_tick_cond_mut;
 pthread_cond_t done_cond_var;
 pthread_mutex_t done_cond_mut;
 
+extern lua_State *lua_newcthread(lua_State *L, int cstacksize);
+
 int rand_lim(int limit) {
     int divisor = RAND_MAX / (limit + 1);
     int retval;
@@ -67,6 +69,10 @@ void call_bot_main(lua_State *L, player_t *p, gamestate_t *gs) {
 
 void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
   call_bot_fn(L, p, gs, "bot_init");
+}
+
+void line_hook(lua_State *L, lua_Debug *ar) {
+  lua_yield(L, 0);
 }
 
 void *player_thread(void *data) {
@@ -111,7 +117,9 @@ end\n";
 
     int error = luaL_loadstring(L, program);
 
-    call_bot_init(L, this_player, gs);
+    lua_State *thread = lua_newthread(L, 1000);
+    lua_sethook(thread, line_hook, LUA_MASKCOUNT, 100);
+    call_bot_init(thread, this_player, gs);
 
     while (true) {
         pthread_mutex_lock(&inc_tick_cond_mut);

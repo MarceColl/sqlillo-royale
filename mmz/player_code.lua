@@ -4,6 +4,7 @@ function initialize (me)
 	bot_main(me)
   end
 end
+
 a = 0
 my_pos = vec.new(0, 0)
 dir = vec.new(1, 0)
