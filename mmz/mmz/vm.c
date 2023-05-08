@@ -1,5 +1,26 @@
 #include "parser.h"
 
+typedef struct stack {
+  
+} stack_t;
+
+typedef enum value_type {
+  VT_NUMBER,
+  VT_STRING,
+  VT_VECTOR,
+  VT_ARRAY,
+  VT_OBJECT,
+} value_type_t;
+
+typedef struct value {
+  value_type_t type;
+  union {
+    int64_t number;
+    char *string;
+    
+  }
+} value_t;
+
 /**
  * Structure that holds the limits of the VM
  */
@@ -16,13 +37,13 @@ typedef struct vm {
   ast_node_t *curr;
   struct arena* ast_arena;
   vm_limits_t limits;
+  stack_t stack;
 } vm_t;
 
 /**
  * Initialize the VM with the given source code.
  */
 void vm_init(vm_t *vm, char *source, ) {
-  // TODO(Marce)
   parser_init(&parser);
   vm->root = parser_parse(&parser, source);
 }
@@ -38,7 +59,7 @@ void vm_init(vm_t *vm, char *source, ) {
  * function again.
  */
 void vm_tick(vm_t *vm) {
-  // TODO(Marce)
+  
 }
 
 /**

@@ -5,8 +5,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "lexer.h"
 #include "arena.h"
+#include "parser.h"
 
 #define INFIX(id, bp) symbol(parser, id, bp)->led = &infix_led;
 #define INFIXR(id, bp) symbol(parser, id, bp)->led = &infixr_led;
@@ -14,36 +14,6 @@
 #define LITERAL(id, bp) symbol(parser, id, bp)->nud = &literal_nud;
 #define SYMBOL(id, bp) symbol(parser, id, bp)
 #define DELIMITER(id) symbol(parser, id, 0)->nud = NULL; symbol(parser, id, 0)->led = NULL;
-
-typedef struct parser parser_t;
-typedef struct token_def token_def_t;
-typedef struct ast_node {
-  token_t token;
-  token_def_t *tdef;
-  struct ast_node *left;
-  struct ast_node *right;
-  struct ast_node *next;
-  uint16_t arity;
-} ast_node_t;
-
-
-/**
- * Default token definition according to pratt parsing
- */
-typedef struct token_def {
-  enum token_type id;
-  ast_node_t* (*nud)(parser_t *parser, ast_node_t *this);
-  ast_node_t* (*led)(parser_t *parser, ast_node_t *this, ast_node_t *left);
-  ast_node_t* (*fud)(parser_t *parser, ast_node_t *this);
-  void (*error)(ast_node_t *this, char *msg);
-  int lbp;
-} token_def_t;
-
-typedef struct parser {
-  struct arena* ast_arena;
-  lexer *l;
-  token_def_t symbol_table[TT_COUNT];
-} parser_t;
 
 void print_ast(ast_node_t *root, int depth);
 token_def_t* symbol(parser_t *parser, enum token_type id, uint64_t bp);
