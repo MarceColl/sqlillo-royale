@@ -2,6 +2,7 @@ import {wait} from '../utils';
 
 import {Match, User} from './types';
 
+// The API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 ///////////////
