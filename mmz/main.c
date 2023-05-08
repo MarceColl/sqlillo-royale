@@ -16,6 +16,7 @@
 
 
 #define MMZ_GRAPHICS_SUPPORT 0
+#define SAVE_TRACES 0
 
 #if MMZ_GRAPHICS_SUPPORT
 #include <SDL.h>
@@ -37,6 +38,7 @@ typedef enum {
 } match_thread_status;
 
 enum entity_type {
+    NONE = -1,
     PLAYER = 0,
     SMALL_PROJ = 1,
     LARGE_PROJ = 2,
@@ -73,7 +75,7 @@ typedef struct {
 typedef struct {
   int id;
   char *username;
-  player_code_t *code;
+  player_code_t code;
   float cd[NUM_SKILLS];
   int8_t health;
   int8_t used_skill;
@@ -352,6 +354,12 @@ static int me_id(lua_State *L) {
   return 1;
 }
 
+static int me_username(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  lua_pushstring(L, me->p->username);
+  return 1;
+}
+
 static int me_pos(lua_State *L) {
   me_t *me = (me_t*)lua_touserdata(L, 1);
   vecf_t *vec = (vecf_t*)lua_newuserdata(L, sizeof(vecf_t));
@@ -411,6 +419,7 @@ static const struct luaL_Reg melib_m[] = {
   {"health", me_health},
   {"move", me_move},
   {"id", me_id},
+  {"username", me_username},
   {"visible", me_visible},
   {"cast", me_cast},
   {"pos", me_pos},
@@ -443,7 +452,7 @@ void call_bot_fn(lua_State *L, player_t *p, gamestate_t *gs, char *fn) {
     me->gs = gs;
 
     if (lua_pcall(L, 1, 0, 0)) {
-      printf("error running function `%s`: %s", fn, lua_tostring(L, -1));
+      printf("[WARN] Player %d running function `%s`: %s\n", p->id, fn, lua_tostring(L, -1));
     }
 }
 
@@ -456,29 +465,6 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
 }
 
 void *player_thread(void *data) {
-  // From the Lua code you can access several stuff
-  // * your health
-    char *program = "\
-a = 0\n\
-my_pos = vec.new(0, 0)\n\
-dir = vec.new(1, 0)\n\
-\n\
-function bot_init (me)\n\
-  math.randomseed(os.clock()*10000)\n\
-end\n\
-\n\
-function bot_main (me)\n\
-  my_pos = me:pos()\n\
-  dir = dir:add(vec.new(math.random(0, 10) - 5, math.random(0, 10) - 5))\n\
-  me:move(dir)\n\
-  a = a + 1\n\
-  entities = me:visible()\n\
-  for _, ent in ipairs(entities) do\n\
-    me:cast(0, ent:pos():sub(my_pos))\n\
-    me:cast(1, ent:pos():sub(my_pos))\n\
-    me:cast(2, ent:pos():sub(my_pos))\n\
-  end\n\
-end\n";
     player_thread_data_t *ptd = (player_thread_data_t *) data;
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
@@ -486,17 +472,20 @@ end\n";
     luaopen_entitylib(L);
     luaopen_veclib(L);
 
-    if (luaL_loadstring(L, program) || lua_pcall(L, 0, 0, 0)) {
-      printf("cannot run file: %s", lua_tostring(L, -1));
+    int id = ptd->id;
+    gamestate_t *gs = ptd->gs;
+    player_t this_player = gs->players[id];
+    char *code = this_player.code.code;
+
+    if (luaL_loadstring(L, code) || lua_pcall(L, 0, 0, 0)) {
+      printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
       return NULL;
     }
 
-    int id = ptd->id;
-    gamestate_t *gs = ptd->gs;
-    player_t *this_player = &gs->players[id];
+    luaL_loadstring(L, code);
+    call_bot_init(L, &this_player, gs);
 
-    luaL_loadstring(L, program);
-    call_bot_init(L, this_player, gs);
+    printf("[INFO] Player #%d called `bot_init` OK!\n", id);
 
     while (true) {
         pthread_mutex_lock(&inc_tick_cond_mut);
@@ -509,7 +498,7 @@ end\n";
           break;
         }
 
-        call_bot_main(L, this_player, gs);
+        call_bot_main(L, &this_player, gs);
 
         pthread_mutex_lock(&done_cond_mut);
         ptd->done = true;
@@ -536,26 +525,28 @@ void normalize(vecf_t *v) {
 
 void init_traces(gamestate_t *gs) {
   gs->traces = yyjson_mut_doc_new(NULL);
-
   yyjson_mut_val *root = yyjson_mut_obj(gs->traces);
   yyjson_mut_val *keymap = yyjson_mut_str(gs->traces, "map");
   yyjson_mut_val *map_obj = yyjson_mut_obj(gs->traces);
 
-  yyjson_mut_val *keyw = yyjson_mut_str(gs->traces, "width");
-  yyjson_mut_val *keyh = yyjson_mut_str(gs->traces, "height");
+  yyjson_mut_val *key_weight = yyjson_mut_str(gs->traces, "weight");
+  yyjson_mut_val *key_height = yyjson_mut_str(gs->traces, "height");
   yyjson_mut_val *key_duration = yyjson_mut_str(gs->traces, "duration");
+  yyjson_mut_val *key_tick_time = yyjson_mut_str(gs->traces, "tick_time");
   yyjson_mut_val *key_n_players = yyjson_mut_str(gs->traces, "num_players");
   yyjson_mut_val *key_dc_active = yyjson_mut_str(gs->traces, "dc_active");
 
-  yyjson_mut_val *numw = yyjson_mut_int(gs->traces, 500);
-  yyjson_mut_val *numh = yyjson_mut_int(gs->traces, 500);
+  yyjson_mut_val *num_weight = yyjson_mut_int(gs->traces, 500);
+  yyjson_mut_val *num_height = yyjson_mut_int(gs->traces, 500);
   yyjson_mut_val *num_duration = yyjson_mut_int(gs->traces, GAME_LENGTH);
+  yyjson_mut_val *num_tick_time = yyjson_mut_real(gs->traces, (double)TICK_TIME);
   yyjson_mut_val *num_n_players = yyjson_mut_int(gs->traces, gs->n_players);
   yyjson_mut_val *bool_dc_active = yyjson_mut_bool(gs->traces, gs->dc_active);
 
-  yyjson_mut_obj_add(map_obj, keyw, numw);
-  yyjson_mut_obj_add(map_obj, keyh, numh);
+  yyjson_mut_obj_add(map_obj, key_weight, num_weight);
+  yyjson_mut_obj_add(map_obj, key_height, num_height);
   yyjson_mut_obj_add(map_obj, key_duration, num_duration);
+  yyjson_mut_obj_add(map_obj, key_tick_time, num_tick_time);
   yyjson_mut_obj_add(map_obj, key_n_players, num_n_players);
   yyjson_mut_obj_add(map_obj, key_dc_active, bool_dc_active);
 
@@ -563,7 +554,7 @@ void init_traces(gamestate_t *gs) {
 
   yyjson_mut_val *traces = yyjson_mut_arr(gs->traces);
   gs->traces_arr = traces;
-  
+
   yyjson_mut_val *traces_key = yyjson_mut_str(gs->traces, "traces");
   yyjson_mut_obj_add(root, traces_key, traces);
   yyjson_mut_doc_set_root(gs->traces, root);
@@ -579,8 +570,14 @@ void update_traces(gamestate_t *gs) {
       yyjson_mut_val *key_health = yyjson_mut_str(gs->traces, "h");
       yyjson_mut_val *key_type = yyjson_mut_str(gs->traces, "ty");
 
+      yyjson_mut_val *str_username = yyjson_mut_null(gs->traces);
+
+      // Only set the username when it is a player
+      if (gs->meta[i].type == PLAYER) {
+        str_username = yyjson_mut_str(gs->traces, gs->players[i].username);
+      }
+
       yyjson_mut_val *num_id = yyjson_mut_int(gs->traces, i);
-      yyjson_mut_val *str_username = yyjson_mut_str(gs->traces, gs->players[i].username);
       yyjson_mut_val *num_x = yyjson_mut_real(gs->traces, gs->pos[i].x);
       yyjson_mut_val *num_y = yyjson_mut_real(gs->traces, gs->pos[i].y);
       yyjson_mut_val *num_tick = yyjson_mut_int(gs->traces, tick);
@@ -602,7 +599,11 @@ void update_traces(gamestate_t *gs) {
 }
 
 void save_traces(gamestate_t *gs) {
-  yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, NULL);
+  yyjson_write_err json_err;
+
+  if (!yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, &json_err)) {
+    printf("[ERROR] Could not save data to JSON: (%u) %s\n", json_err.code, json_err.msg);
+  }
 }
 
 int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos, vecf_t *dir, int owner) {
@@ -640,17 +641,18 @@ void pg_error_exit(PGconn *conn, int code) {
 }
 
 void pg_result_error_handler(PGresult *res) {
-  if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-    printf("[ERROR] %s\n", PQresultErrorMessage(res));
-
+  int status = PQresultStatus(res);
+  if (status != PGRES_TUPLES_OK) {
+    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
 }
 
 void pg_command_error_handler(PGresult *res) {
-  if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-    printf("[ERROR] %s\n", PQresultErrorMessage(res));
+  int status = PQresultStatus(res);
+  if (status != PGRES_COMMAND_OK) {
+    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
@@ -698,7 +700,7 @@ ORDER BY\n\
     gamestate_t gs = {
       .n_players = rows,
       .active_entities = rows,
-      .players = (player_t *) malloc(sizeof(player_t) * rows),
+      .players = (player_t *) malloc(sizeof(player_t) * MAX_ENTITIES),
       .threads = (pthread_t *) malloc(sizeof(pthread_t) * rows),
       .w = 500,
       .h = 500,
@@ -723,28 +725,40 @@ ORDER BY\n\
     player_thread_data_t *ptd = (player_thread_data_t *) malloc(sizeof(player_thread_data_t) * gs.n_players);
     init_traces(&gs);
 
-    printf("Setup players %d structures\n", gs.n_players);
+    printf("Setup thread data for %d\n", gs.n_players);
 
-    for (int i = 0; i < gs.n_players; i++) {
+    for (int i = 0; i < MAX_ENTITIES; i++) {
       gs.pos[i] = (vecf_t) {.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
+      gs.meta[i] = (entity_metadata_t) {.owner = i, .type = NONE};
 
-      player_code_t code = (player_code_t) { .uuid = PQgetvalue(res, i, 1), .code = PQgetvalue(res, i, 2) };
+      if (i < gs.n_players) {
+        gs.players[i] = (player_t) {
+          .id = i,
+          .username = PQgetvalue(res, i, 0),
+          .health = 100, 
+          .used_skill = -1, 
+          .stunned = 0 
+        };
 
-      gs.players[i] = (player_t) {
-        .id = i,
-        .username = PQgetvalue(res, i, 0),
-        .code = &code,
-        .health = 100, 
-        .used_skill = -1, 
-        .stunned = 0 
-      };
+        gs.players[i].code = (player_code_t) { .uuid = PQgetvalue(res, i, 1), .code = PQgetvalue(res, i, 2) };
+        gs.meta[i].type = PLAYER;
 
-      ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false };
-      gs.meta[i] = (entity_metadata_t) {.owner = i, .type = PLAYER};
-      pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
+        printf("Player #%d is %s\n", i, gs.players[i].username);
+      }
     }
 
-    PQclear(res);
+    for (int i = 0; i < gs.n_players; i++) {
+        ptd[i] = (player_thread_data_t) {.id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false };
+
+        pthread_create(
+            &gs.threads[i], 
+            NULL, 
+            &player_thread, 
+            &ptd[i]
+        );
+    }
+
+    printf("Setup %d players structures with %d max entities\n", gs.n_players, MAX_ENTITIES);
 
     float curr_time = 0;
     printf("Starting match...\n");
@@ -883,47 +897,70 @@ ORDER BY\n\
 #endif
     }
 
+#if SAVE_TRACES
     save_traces(&gs);
     printf("Traces saved on disk!\n");
+#endif
 
-    /* const char *json = yyjson_mut_write(gs.traces, 0, NULL); */
+    const char *json = yyjson_mut_write(gs.traces, 0, NULL);
+    const char *paramValues[1] = {json};
 
-    /* const char *paramValues[1] = {json}; */
+    PGresult *res_ins = PQexecParams(
+      conn, 
+      "INSERT INTO games (id, data) VALUES (uuid_generate_v4(), $1) RETURNING id",
+      1,
+      NULL,
+      paramValues,
+      NULL,
+      NULL,
+      0
+    );
 
-    /* res = PQexecParams( */
-    /*   conn, */ 
-    /*   "INSERT INTO games (id, data) VALUES (uuid_generate_v4(), $1) RETURNING id", */
-    /*   1, */
-    /*   NULL, */
-    /*   paramValues, */
-    /*   NULL, */
-    /*   NULL, */
-    /*   0 */
-    /* ); */
+    pg_result_error_handler(res_ins);
+    int i_rows = PQntuples(res_ins);
 
-    /* pg_command_error_handler(res); */
+    if (i_rows == 0) {
+      printf("[ERROR] No game was generated...\n");
+      pg_error_exit(conn, 1);
+    } else if (i_rows > 1) {
+      printf("[ERROR] More than one game generated (%d), WTF?\n", i_rows);
+      pg_error_exit(conn, 1);
+    }
 
-    /* rows = PQntuples(res); */
-
-    /* if (rows == 0) { */
-    /*   printf("[ERROR] No game was generated...\n"); */
-    /*   pg_error_exit(conn, 1); */
-    /* } else if (rows > 1) { */
-    /*   printf("[ERROR] More than one game generated, WTF?\n"); */
-    /*   pg_error_exit(conn, 1); */
-    /* } */
-
-    /* const char *game_uuid = PQgetvalue(res, 0, 0); */
-    /* printf("Game id is %s\n", game_uuid); */
-
-    /* PQclear(res); */
+    const char *game_uuid = PQgetvalue(res_ins, 0, 0);
+    printf("Game id is %s\n", game_uuid);
 
     for (int i = 0; i < gs.n_players; i++) {
         pthread_cancel(gs.threads[i]);
 
-        // TODO(taras)
-        // Create game to user relationships
+        const char *paramValues2[2] = {
+          gs.players[i].username,
+          game_uuid
+        };
+
+        PGresult *res_ins_2 = PQexecParams(
+          conn, 
+          "INSERT INTO games_to_users (username, game_id) VALUES ($1, $2)",
+          2,
+          NULL,
+          paramValues2,
+          NULL,
+          NULL,
+          0
+        );
+
+        pg_command_error_handler(res_ins_2);
+        PQclear(res_ins_2);
+
+        printf("Player #%d with %s connection created!\n", i, gs.players[i].username);
     }
+
+    PQclear(res_ins);
+
+    // NOTE(taras)
+    // Close this now as we are using the `username` from it,
+    // probably this could be done in a better way, but fuck it
+    PQclear(res);
 }
 
 int main() {
