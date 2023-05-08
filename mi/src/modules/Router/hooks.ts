@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { PathParams } from "./types";
 import { build } from "./utils";
+import { useState } from "react";
 
 type RouterStore = {
   path: string;
@@ -8,7 +9,7 @@ type RouterStore = {
 };
 
 export const useRouterStore = create<RouterStore>()((set) => ({
-  path: window.location.pathname,
+  path: window.location.hash.slice(1),
   setPath: (path: string) => {
     set({ path });
   },
@@ -23,22 +24,18 @@ type GoToInput<T extends string> =
   | string;
 
 const useRouter = () => {
-  const pushState = (...args: Parameters<typeof window.history.pushState>) => {
-    // No idea what am I doing, but looks like it works
-    window.dispatchEvent(new Event("popstate"));
-    window.history.pushState(...args);
-    window.dispatchEvent(new Event("popstate"));
-  };
+  const [state, setState] = useState<Record<string, unknown>>();
   return {
     goTo: <T extends string>(input: GoToInput<T>) => {
       if (typeof input === "string") {
-        pushState({}, "", input);
+        window.location.hash = `#${input}`;
         return;
       }
       const { path, params, state } = input;
-      pushState(state, "", build(path, params));
+      window.location.hash = `#${build(path, params)}`;
+      setState(state);
     },
-    state: <T extends Record<string, unknown>>() => window.history.state as T,
+    state: <T extends Record<string, unknown>>() => state as T,
     path: useRouterStore((state) => state.path),
   };
 };

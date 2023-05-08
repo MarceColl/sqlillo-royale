@@ -6,14 +6,19 @@ type Props = {
 };
 
 const Router = ({ children }: Props) => {
+  useEffect(() => {
+    if (window.location.hash === "") {
+      window.location.hash = "#/";
+    }
+  }, []);
   const setPath = useRouterStore((state) => state.setPath);
   useEffect(() => {
-    const handlePopState = () => {
-      setPath(window.location.pathname);
+    const handleHashChange = () => {
+      setPath(window.location.hash.slice(1));
     };
-    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handleHashChange);
     };
   }, []);
   return children ? <>{children}</> : null;
