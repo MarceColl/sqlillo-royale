@@ -34,9 +34,9 @@ const mapTraceToEntityState = (t: Trace) => {
 };
 
 export function mapTracesToFrontend({ map, traces }: RawMatch): Match {
-  const { h, w } = map;
+  const { height, weight } = map;
   const result: Match = {
-    map: { size: [w, h] },
+    map: { size: [weight, height] },
     ticks: [],
   };
   for (const trace of traces) {

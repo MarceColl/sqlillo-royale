@@ -69,8 +69,9 @@ export type BulletTrace = BaseTrace & {
 export type Trace = PlayerTrace | BulletTrace;
 
 export type RawMap = {
-  w: number;
-  h: number;
+  // WEIGHT xdddddd
+  weight: number;
+  height: number;
 };
 
 export type RawMatch = {
