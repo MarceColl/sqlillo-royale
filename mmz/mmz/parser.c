@@ -70,7 +70,7 @@ void parser_init(parser_t *parser, char* code) {
   SYMBOL(TT_KW_FOR, 0)->fud = &if_fud; // TODO(Marce): for fud
 
   INFIX(TT_ADD, 60);
-  PREFIX(TT_ADD, 60);
+  // PREFIX(TT_ADD, 60);
   INFIX(TT_MINUS, 60);
   PREFIX(TT_MINUS, 60);
   INFIX(TT_MULT, 70);
