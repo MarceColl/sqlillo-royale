@@ -77,3 +77,20 @@ type GameToUser struct {
 	GameID   uuid.UUID `bun:"type:uuid,pk"`
 	Game     *Game     `bun:"rel:belongs-to,join:game_id=id"`
 }
+
+// GameConfig is the high level definition
+// of a SQLillo game
+type GameConfig struct {
+	Width      int  `json:"width"`
+	Heigth     int  `json:"heigth"`
+	Duration   int  `json:"duration"`
+	NumPlayers int  `json:"num_players"`
+	DcActive   bool `json:"dc_active"`
+}
+
+// GameOutcomeItem is the outcome of a game, for a specific player
+type GameOutcomeItem struct {
+	Ranking     int       `json:"ranking"`
+	Username    string    `json:"username"`
+	CodeVersion uuid.UUID `json:"code_version"`
+}
