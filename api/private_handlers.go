@@ -44,7 +44,7 @@ func (api *Api) PrivateCreateCodeHandler(c *fiber.Ctx, user User) error {
 	return c.JSON(code)
 }
 
-func (api *Api) PrivateGameHandler(c *fiber.Ctx, user User) error {
+func (api *Api) PrivateGamesHandler(c *fiber.Ctx, user User) error {
 	var games []*Game = []*Game{}
 
 	if err := api.db.NewSelect().Model(&games).Join("JOIN games_to_users AS g2u ON g.id = g2u.game_id").Where("g2u.username = ?", user.Username).Scan(c.Context()); err != nil {

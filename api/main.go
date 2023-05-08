@@ -28,12 +28,12 @@ func main() {
 	apiRoutes.Post("/login", api.PublicLoginHandler)
 	apiRoutes.Post("/register", api.PublicRegisterHandler)
 
-	// TODO: Carouselle equivalent of the games
 	// TODO: Ranking
-	// TODO: Games will be public
-	apiRoutes.Get("/carouselle", NotImplementedHandler)
 	apiRoutes.Get("/ranking", NotImplementedHandler)
-	apiRoutes.Get("/games", NotImplementedHandler)
+
+	apiRoutes.Get("/carouselle", api.PublicCarouselleHandler)
+	apiRoutes.Get("/games/:id", api.PublicGameByIdHandler)
+	apiRoutes.Get("/games", api.PublicGamesHandler)
 
 	private := apiRoutes.Group("/private")
 
@@ -45,8 +45,7 @@ func main() {
 	private.Get("/codes", api.WithUser(api.PrivateCodeHandler))
 	private.Post("/codes", api.WithUser(api.PrivateCreateCodeHandler))
 
-	private.Get("/games", api.WithUser(api.PrivateGameHandler))
-	private.Get("/games/:id", NotImplementedHandler)
+	private.Get("/games", api.WithUser(api.PrivateGamesHandler))
 
 	port := os.Getenv("PORT")
 

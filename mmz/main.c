@@ -888,12 +888,13 @@ ORDER BY\n\
 #endif
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
-  const char *paramValues[1] = {json};
+  const char *param_game[3] = {json, "{}", "[]"};
 
-  PGresult *res_ins = PQexecParams(conn,
-                                   "INSERT INTO games (id, data) VALUES "
-                                   "(uuid_generate_v4(), $1) RETURNING id",
-                                   1, NULL, paramValues, NULL, NULL, 0);
+  PGresult *res_ins =
+      PQexecParams(conn,
+                   "INSERT INTO games (id, data, config, outcome) VALUES "
+                   "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
+                   3, NULL, param_game, NULL, NULL, 0);
 
   pg_result_error_handler(res_ins);
   int i_rows = PQntuples(res_ins);
@@ -912,11 +913,14 @@ ORDER BY\n\
   for (int i = 0; i < gs.n_players; i++) {
     pthread_cancel(gs.threads[i]);
 
-    const char *paramValues2[2] = {gs.players[i].username, game_uuid};
+    const char *params_connection[3] = {gs.players[i].username, game_uuid,
+                                        gs.players[i].code.uuid};
 
-    PGresult *res_ins_2 = PQexecParams(
-        conn, "INSERT INTO games_to_users (username, game_id) VALUES ($1, $2)",
-        2, NULL, paramValues2, NULL, NULL, 0);
+    PGresult *res_ins_2 =
+        PQexecParams(conn,
+                     "INSERT INTO games_to_users (username, "
+                     "game_id, code_id) VALUES ($1, $2, $3)",
+                     3, NULL, params_connection, NULL, NULL, 0);
 
     pg_command_error_handler(res_ins_2);
     PQclear(res_ins_2);
