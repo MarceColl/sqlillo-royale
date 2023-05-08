@@ -2,7 +2,7 @@ module github.com/MarceColl/sqlillo-royale/api
 
 go 1.20
 
-require github.com/gofiber/fiber/v2 v2.44.0
+require github.com/gofiber/fiber/v2 v2.45.0
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
@@ -25,11 +25,11 @@ require (
 	github.com/uptrace/bun/driver/pgdriver v1.1.12 // indirect
 	github.com/uptrace/bun/extra/bundebug v1.1.12 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.45.0 // indirect
+	github.com/valyala/fasthttp v1.47.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	mellium.im/sasl v0.3.1 // indirect
 )
