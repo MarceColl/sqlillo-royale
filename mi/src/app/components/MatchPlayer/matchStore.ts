@@ -28,6 +28,6 @@ export const useMatchStore = create<MatchStore>()(
     advanceTicks: (amount: number) =>
       set((state) => ({ tick: state.tick + amount })),
     rewindTicks: (amount: number) =>
-      set((state) => ({ tick: state.tick - amount })),
+      set((state) => ({ tick: Math.max(0, state.tick - amount) })),
   }))
 );

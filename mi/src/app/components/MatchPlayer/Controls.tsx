@@ -7,7 +7,7 @@ export const Controls = () => {
     <S.ControlsContainer>
       <S.ControlButton $size={2}>
         <S.PreviousIcon
-          onClick={() => rewindTicks(state === "paused" ? 1 : 500)}
+          onClick={() => (state === "paused" ? rewindTicks(1) : undefined)}
         />
       </S.ControlButton>
       <S.ControlButton $size={3.5}>
@@ -19,7 +19,7 @@ export const Controls = () => {
       </S.ControlButton>
       <S.ControlButton $size={2}>
         <S.NextIcon
-          onClick={() => advanceTicks(state === "paused" ? 1 : 500)}
+          onClick={() => (state === "paused" ? advanceTicks(1) : undefined)}
         />
       </S.ControlButton>
     </S.ControlsContainer>
