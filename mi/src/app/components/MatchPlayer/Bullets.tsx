@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { EntityKind, Match } from "./types";
 import { useRef } from "react";
 import { TICK_RATE_MS } from "./constants";
+import { useCurrentTickRef } from "./hooks";
 
 const tempBullets = new THREE.Object3D();
 
@@ -20,10 +21,11 @@ const Bullets = ({ match }: Props) => {
     -match.map.size[1] / 2
   );
 
-  useFrame(({ clock }) => {
-    const currentTick = Math.round(
-      (clock.elapsedTime * TICK_RATE_MS) % match.ticks.length
-    );
+  const currentTickRef = useCurrentTickRef();
+
+  useFrame(() => {
+    if (!currentTickRef.current) return;
+    const { current: currentTick } = currentTickRef;
     for (const entity of match.ticks[currentTick].entities) {
       if (entity.kind !== EntityKind.BULLET) continue;
       const [x, y] = entity.pos;

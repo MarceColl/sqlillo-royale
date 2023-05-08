@@ -1,6 +1,6 @@
 import { Queries } from "@/app/constants";
 import { useQuery } from "react-query";
-// import traces from "@/../traces.json";
+import traces from "@/../traces.json";
 
 import * as API from "@/app/API";
 import * as S from "./styled";
@@ -23,12 +23,11 @@ const MatchPage = ({ matchId }: Props) => {
     return <>Loading...</>;
   }
   const { match } = data;
-  // TODO: get from match
-  // const parsedTraces = mapTracesToFrontend(traces as RawMatch);
+  const parsedTraces = mapTracesToFrontend(traces as RawMatch);
   return (
     <S.Container>
       <div>Seeing match: {match.name}</div>
-      {/* <S.MatchPlayer match={parsedTraces} /> */}
+      <S.MatchPlayer match={parsedTraces} />
     </S.Container>
   );
 };

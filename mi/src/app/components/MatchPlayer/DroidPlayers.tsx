@@ -1,10 +1,12 @@
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EntityKind, Match } from "./types";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { TICK_RATE_MS } from "./constants";
 import droidUrl from "@/app/assets/DROID.glb?url";
 import { useGLTF } from "@react-three/drei";
+import { MatchStore, useMatchStore } from "./matchStore";
+import { useCurrentTickRef } from "./hooks";
 
 const tempPlayers = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -28,10 +30,11 @@ const DroidPlayers = ({ match }: Props) => {
     -match.map.size[1] / 2
   );
 
-  useFrame(({ clock }) => {
-    const currentTick = Math.round(
-      (clock.elapsedTime * TICK_RATE_MS) % match.ticks.length
-    );
+  const currentTickRef = useCurrentTickRef();
+
+  useFrame(() => {
+    if (!currentTickRef.current) return;
+    const { current: currentTick } = currentTickRef;
     for (const entity of match.ticks[currentTick].entities) {
       if (entity.kind !== EntityKind.PLAYER) continue;
       if (entity.health <= 0) continue;
