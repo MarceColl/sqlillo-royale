@@ -2,7 +2,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EntityKind, Match } from "./types";
 import { useRef } from "react";
-import { TICK_RATE_MS } from "./constants";
 import { useCurrentTickRef } from "./hooks";
 
 const tempBullets = new THREE.Object3D();
@@ -32,6 +31,7 @@ const Bullets = ({ match }: Props) => {
       tempBullets.position.set(x, 0, y);
       tempBullets.position.add(mapOffset);
       tempBullets.updateMatrix();
+      // TODO: identify bullets correctly
       ref.current.setMatrixAt(entity.id - 200, tempBullets.matrix);
     }
     ref.current.instanceMatrix.needsUpdate = true;

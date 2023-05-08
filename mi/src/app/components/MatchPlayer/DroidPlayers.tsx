@@ -37,8 +37,8 @@ const DroidPlayers = ({ match }: Props) => {
     const { current: currentTick } = currentTickRef;
     for (const entity of match.ticks[currentTick].entities) {
       if (entity.kind !== EntityKind.PLAYER) continue;
-      if (entity.health <= 0) continue;
-      const [x, y] = entity.pos;
+      const isAlive = entity.health > 0;
+      const [x, y] = isAlive ? entity.pos : [0, 1000];
       tempPlayers.position.set(x, 0, y);
       tempPlayers.position.add(mapOffset);
       tempPlayers.rotation.set(0, Math.sin(currentTick / 10), 0);
@@ -49,6 +49,7 @@ const DroidPlayers = ({ match }: Props) => {
         mesh.current.setMatrixAt(entity.id, tempPlayers.matrix);
         mesh.current.instanceMatrix.needsUpdate = true;
       }
+      // TODO: identify players correctly
       metal.current?.setColorAt(entity.id, tempColor);
     }
     // ref.current.instanceMatrix.needsUpdate = true;
