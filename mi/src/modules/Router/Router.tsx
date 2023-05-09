@@ -11,7 +11,7 @@ const Router = ({ children }: Props) => {
     if (window.location.hash === "") {
       goTo("/");
     }
-  }, [goTo]);
+  }, []);
   useEffect(() => {
     const handleHashChange = () => {
       goTo(window.location.hash.slice(1));
