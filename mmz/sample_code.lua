@@ -1,20 +1,52 @@
-a = 0
-my_pos = vec.new(0, 0)
-dir = vec.new(1, 0)
+-- Global variables
+local target = nil
+local cooldowns = {0, 0, 0}
 
-function bot_init (me)
-  math.randomseed(os.clock()*10000)
+-- Initialize bot
+function bot_init(me)
 end
 
-function bot_main (me)
-  my_pos = me:pos()
-  dir = dir:add(vec.new(math.random(0, 10) - 5, math.random(0, 10) - 5))
-  me:move(dir)
-  a = a + 1
-  entities = me:visible()
-  for _, ent in ipairs(entities) do
-    me:cast(0, ent:pos():sub(my_pos))
-    me:cast(1, ent:pos():sub(my_pos))
-    me:cast(2, ent:pos():sub(my_pos))
-  end
+-- Main bot function
+function bot_main(me)
+    local me_pos = me:pos()
+
+    -- Update cooldowns
+    for i = 1, 3 do
+        if cooldowns[i] > 0 then
+            cooldowns[i] = cooldowns[i] - 1
+        end
+    end
+
+    -- Find the closest visible enemy
+    local closest_enemy = nil
+    local min_distance = math.huge
+
+    for _, player in ipairs(me:visible()) do
+        local dist = vec.distance(me_pos, player:pos())
+
+        if dist < min_distance then
+            min_distance = dist
+            closest_enemy = player
+        end
+    end
+
+    -- Set target to closest visible enemy
+    local target = closest_enemy
+
+    if target then
+        local direction = target:pos():sub(me_pos)
+        
+        -- If target is within melee range and melee attack is not on cooldown, use melee attack
+        if min_distance <= 2 and cooldowns[3] == 0 then
+            me:cast(2, direction)
+            cooldowns[3] = 50
+        -- If target is not within melee range and projectile is not on cooldown, use projectile
+        elseif cooldowns[1] == 0 then
+            me:cast(0, direction)
+            cooldowns[1] = 1
+        end
+
+        -- Move towards the target
+        me:move(direction)
+    end
 end
