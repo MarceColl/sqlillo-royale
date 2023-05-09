@@ -89,7 +89,7 @@ const RegisterPage = () => {
           <div>
             Or{" "}
             <Link to={Routes.login}>
-              <Anchor label="register" margin="none" />
+              <Anchor label="login" margin="none" />
             </Link>{" "}
             if you already have an account
           </div>
