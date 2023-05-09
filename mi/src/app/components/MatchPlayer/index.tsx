@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { Match } from "./types";
 import { MatchScene } from "./MatchScene";
 import { Controls } from "./Controls";
+import { PlayerList } from "./PlayerList";
 
 type Props = {
   match: Match;
@@ -15,6 +16,7 @@ export const MatchPlayer = ({ match, className }: Props) => {
         <MatchScene match={match} />
       </Canvas>
       <Controls />
+      <PlayerList players={match.players} />
     </div>
   );
 };

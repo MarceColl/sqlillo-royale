@@ -10,6 +10,9 @@ import { DroidPlayers } from "./DroidPlayers";
 import { useFrame } from "@react-three/fiber";
 import { useMatchStore } from "./matchStore";
 import { TICK_RATE_MS } from "./constants";
+import { useRef } from "react";
+
+const target = new THREE.Object3D();
 
 type MatchSceneProps = {
   match: Match;
@@ -20,8 +23,9 @@ const skyColor = 0x050a19;
 const groundColor = 0x045460;
 
 const MatchScene = ({ match }: MatchSceneProps) => {
+  const obRef = useRef<any>(null);
   useFrame(({ clock }) => {
-    const { state, setTick } = useMatchStore.getState();
+    const { state, setTick, followingPlayer } = useMatchStore.getState();
     const currentTick = Math.round(
       (clock.elapsedTime * TICK_RATE_MS) % match.ticks.length
     );
@@ -36,11 +40,39 @@ const MatchScene = ({ match }: MatchSceneProps) => {
         clock.stop();
       }
     }
+
+    if (followingPlayer) {
+      const [x, y] =
+        match.ticks[currentTick].entities.find(
+          ({ id }) => followingPlayer === id
+        )?.pos || [];
+      if (x === undefined || y === undefined || !obRef.current) return;
+      const { current: ob } = obRef;
+      target.position.set(
+        x - match.map.size[0] / 2,
+        1.75,
+        y - match.map.size[1] / 2
+      );
+      ob.enabled = false;
+      target.add(ob.object);
+      ob.target.set(x - match.map.size[0] / 2, 1.75, y - match.map.size[1] / 2);
+      ob.update();
+    } else {
+      if (!obRef.current) return;
+      const { current: ob } = obRef;
+      if (!ob.enabled) {
+        ob.enabled = true;
+      }
+      if (target.children.length) {
+        target.clear();
+      }
+    }
   });
   return (
     <>
       <PerspectiveCamera makeDefault far={2000} />
       <OrbitControls
+        ref={obRef}
         target={[0, 1.75, 0]}
         maxDistance={match.map.size[0] * 1.5}
         maxAzimuthAngle={Math.PI / 2}
