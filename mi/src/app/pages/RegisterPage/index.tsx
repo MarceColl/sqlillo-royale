@@ -69,6 +69,7 @@ const RegisterPage = () => {
             <FormField
               name="repassword"
               label="Repeat Password"
+              type="password"
               disabled={register.isLoading}
             />
             <Space small />
