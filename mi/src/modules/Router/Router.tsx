@@ -1,19 +1,24 @@
 import { useEffect } from "react";
-import { useRouterStore } from "./hooks";
+import { useRouter } from "./hooks";
 
 type Props = {
   children: React.ReactNode;
 };
 
 const Router = ({ children }: Props) => {
-  const setPath = useRouterStore((state) => state.setPath);
+  const { goTo } = useRouter();
   useEffect(() => {
-    const handlePopState = () => {
-      setPath(window.location.pathname);
+    if (window.location.hash === "") {
+      goTo("/");
+    }
+  }, []);
+  useEffect(() => {
+    const handleHashChange = () => {
+      goTo(window.location.hash.slice(1));
     };
-    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handleHashChange);
     };
   }, []);
   return children ? <>{children}</> : null;

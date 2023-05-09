@@ -34,14 +34,21 @@ const mapTraceToEntityState = (t: Trace) => {
 };
 
 export function mapTracesToFrontend({ map, traces }: RawMatch): Match {
-  const { h, w } = map;
+  const { height, weight } = map;
   const result: Match = {
-    map: { size: [w, h] },
+    map: { size: [weight, height] },
     ticks: [],
+    players: {},
   };
   for (const trace of traces) {
     const tick = result.ticks[trace.t];
     const mappedTrace = mapTraceToEntityState(trace) as Entity;
+    if (trace.ty === EntityKind.PLAYER) {
+      result.players[mappedTrace.id] = {
+        id: mappedTrace.id,
+        name: trace.username,
+      };
+    }
     if (tick) {
       tick.entities.push(mappedTrace);
     } else {

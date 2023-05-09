@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"encoding/json"
+
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
@@ -58,6 +60,9 @@ type Game struct {
 	ID   uuid.UUID `json:"id" bun:"type:uuid,pk,default:uuid_generate_v4()"`
 	Data []byte    `json:"-" bun:",notnull"`
 
+	Config  map[string]interface{} `json:"config" bun:"type:jsonb"`
+	Outcome json.RawMessage        `json:"outcome" bun:"type:jsonb"`
+
 	// TODO: Define all needed data here
 
 	Users []*User `json:"-" bun:"m2m:games_to_users,join:Game=User"`
@@ -76,6 +81,8 @@ type GameToUser struct {
 	User     *User     `bun:"rel:belongs-to,join:username=username"`
 	GameID   uuid.UUID `bun:"type:uuid,pk"`
 	Game     *Game     `bun:"rel:belongs-to,join:game_id=id"`
+
+	CodeID uuid.UUID `bun:"type:uuid"`
 }
 
 // GameConfig is the high level definition

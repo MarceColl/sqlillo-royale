@@ -36,9 +36,15 @@ export type Map = {
   size: vec2;
 };
 
+export type PlayerInfo = {
+  name: string;
+  id: number;
+};
+
 export type Match = {
   map: Map;
   ticks: GameState[];
+  players: Record<number, PlayerInfo>;
 };
 
 export type Interpolator = {
@@ -60,6 +66,7 @@ export type BaseTrace = {
 export type PlayerTrace = BaseTrace & {
   h: number;
   ty: EntityKind.PLAYER;
+  username: string;
 };
 
 export type BulletTrace = BaseTrace & {
@@ -69,8 +76,9 @@ export type BulletTrace = BaseTrace & {
 export type Trace = PlayerTrace | BulletTrace;
 
 export type RawMap = {
-  w: number;
-  h: number;
+  // WEIGHT xdddddd
+  weight: number;
+  height: number;
 };
 
 export type RawMatch = {

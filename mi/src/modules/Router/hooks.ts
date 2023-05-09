@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { PathParams } from "./types";
 import { build } from "./utils";
+import { useCallback, useMemo } from "react";
 
 type RouterStore = {
   path: string;
@@ -8,8 +9,11 @@ type RouterStore = {
 };
 
 export const useRouterStore = create<RouterStore>()((set) => ({
-  path: window.location.pathname,
+  path: window.location.hash.slice(1),
   setPath: (path: string) => {
+    if (window.location.hash !== `#${path}`) {
+      window.location.hash = `#${path}`;
+    }
     set({ path });
   },
 }));
@@ -23,24 +27,25 @@ type GoToInput<T extends string> =
   | string;
 
 const useRouter = () => {
-  const pushState = (...args: Parameters<typeof window.history.pushState>) => {
-    // No idea what am I doing, but looks like it works
-    window.dispatchEvent(new Event("popstate"));
-    window.history.pushState(...args);
-    window.dispatchEvent(new Event("popstate"));
-  };
-  return {
-    goTo: <T extends string>(input: GoToInput<T>) => {
+  const { setPath, path } = useRouterStore();
+  const goTo = useCallback(
+    <T extends string>(input: GoToInput<T>) => {
       if (typeof input === "string") {
-        pushState({}, "", input);
+        setPath(input);
         return;
       }
-      const { path, params, state } = input;
-      pushState(state, "", build(path, params));
+      const { path, params } = input;
+      setPath(build(path, params));
     },
-    state: <T extends Record<string, unknown>>() => window.history.state as T,
-    path: useRouterStore((state) => state.path),
-  };
+    [setPath]
+  );
+  return useMemo(
+    () => ({
+      goTo,
+      path,
+    }),
+    [goTo, path]
+  );
 };
 
 export { useRouter };
