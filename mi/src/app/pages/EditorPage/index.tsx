@@ -1,7 +1,6 @@
 import { Queries } from "@/app/constants";
 import { useQuery } from "react-query";
 import { useState, useEffect } from "react";
-import { Button } from "@/app/ui";
 import { Editor } from "@monaco-editor/react";
 import { useMutation } from "react-query";
 
