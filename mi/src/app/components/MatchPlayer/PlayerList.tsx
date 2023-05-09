@@ -1,17 +1,22 @@
 import { MatchStore, useMatchStore } from "./matchStore";
 import * as S from "./styled";
-import { PlayerInfo } from "./types";
 
-type Props = {
-  players: Record<number, PlayerInfo>;
-};
-const stateSelector = ({ followPlayer, followingPlayer }: MatchStore) => ({
+const stateSelector = ({
   followPlayer,
   followingPlayer,
+  match,
+}: MatchStore) => ({
+  followPlayer,
+  followingPlayer,
+  players: match?.players,
 });
 
-export const PlayerList = ({ players }: Props) => {
-  const { followPlayer, followingPlayer } = useMatchStore(stateSelector);
+export const PlayerList = () => {
+  const { followPlayer, followingPlayer, players } =
+    useMatchStore(stateSelector);
+  if (!players) {
+    return null;
+  }
   return (
     <S.PlayerListContainer>
       {Object.values(players).map(({ name, id }) => (

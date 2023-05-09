@@ -8,6 +8,7 @@ export enum EntityKind {
   PLAYER = 0,
   BULLET = 1,
   OBSTACLE = 2,
+  COD = "cod",
 }
 
 export type BaseEntity = {
@@ -26,10 +27,17 @@ export type Bullet = BaseEntity & {
   kind: EntityKind.BULLET;
 };
 
-export type Entity = Player | Bullet;
+export type COD = BaseEntity & {
+  kind: EntityKind.COD;
+  radius: number;
+};
+
+export type Entity = Player | Bullet | COD;
 
 export type GameState = {
-  entities: Entity[];
+  players: Player[];
+  bullets: Bullet[];
+  cod: COD | null;
 };
 
 export type Map = {
@@ -39,12 +47,16 @@ export type Map = {
 export type PlayerInfo = {
   name: string;
   id: number;
+  color: [number, number, number];
 };
 
-export type Match = {
+export type MatchInfo = {
   map: Map;
-  ticks: GameState[];
   players: Record<number, PlayerInfo>;
+};
+
+export type Match = MatchInfo & {
+  ticks: GameState[];
 };
 
 export type Interpolator = {
@@ -73,13 +85,14 @@ export type BulletTrace = BaseTrace & {
   ty: EntityKind.BULLET;
 };
 
-export type Trace = PlayerTrace | BulletTrace;
-
-export type RawMap = {
-  // WEIGHT xdddddd
-  weight: number;
-  height: number;
+export type CODTrace = BaseTrace & {
+  ty: EntityKind.COD;
+  r: number;
 };
+
+export type Trace = PlayerTrace | BulletTrace | CODTrace;
+
+export type RawMap = { height: number; weight: number };
 
 export type RawMatch = {
   map: RawMap;

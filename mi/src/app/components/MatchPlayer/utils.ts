@@ -1,8 +1,11 @@
 import {
   BaseTrace,
+  Bullet,
+  COD,
   Entity,
   EntityKind,
   Match,
+  Player,
   PlayerTrace,
   RawMatch,
   Trace,
@@ -41,18 +44,26 @@ export function mapTracesToFrontend({ map, traces }: RawMatch): Match {
     players: {},
   };
   for (const trace of traces) {
-    const tick = result.ticks[trace.t];
+    const tick = result.ticks[trace.t] || {
+      players: [],
+      bullets: [],
+      cod: null,
+    };
+    if (!result.ticks[trace.t]) {
+      result.ticks[trace.t] = tick;
+    }
     const mappedTrace = mapTraceToEntityState(trace) as Entity;
     if (trace.ty === EntityKind.PLAYER) {
       result.players[mappedTrace.id] = {
         id: mappedTrace.id,
         name: trace.username,
+        color: [Math.random(), Math.random(), Math.random()],
       };
-    }
-    if (tick) {
-      tick.entities.push(mappedTrace);
-    } else {
-      result.ticks[trace.t] = { entities: [mappedTrace] };
+      tick.players.push(mappedTrace as Player);
+    } else if (trace.ty === EntityKind.BULLET) {
+      tick.bullets.push(mappedTrace as Bullet);
+    } else if (trace.ty === EntityKind.COD) {
+      tick.cod = mappedTrace as COD;
     }
   }
   return result;
