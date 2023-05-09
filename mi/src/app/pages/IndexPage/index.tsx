@@ -29,7 +29,7 @@ export const IndexPage = () => {
         <Space spring />
         <S.JoinContainer>
           <S.Dots />
-          <Link to={Routes.login}>
+          <Link to={Routes.register}>
             <S.JoinButton primary>Join the challenge</S.JoinButton>
           </Link>
         </S.JoinContainer>
