@@ -23,7 +23,7 @@ export const IndexPage = () => {
           <div>Fight everyone. Only one bot can remain.</div>
         </S.Heading>
         <S.Heading size="xsmall" textAlign="center">
-          Will it be yours?
+          Will it be yours? (Probably not)
         </S.Heading>
         <Space spring />
         <S.JoinContainer>
