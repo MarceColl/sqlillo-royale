@@ -888,7 +888,27 @@ ORDER BY\n\
 #endif
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
-  const char *param_game[3] = {json, "{}", "[]"};
+  yyjson_doc *doc = yyjson_read(json, strlen(json), 0);
+
+  yyjson_mut_doc_free(gs.traces);
+
+  if (!doc) {
+    printf("[ERROR] Failed to parse JSON\n");
+    exit(1);
+  }
+
+  yyjson_val *root = yyjson_doc_get_root(doc);
+
+  yyjson_val *traces_val = yyjson_obj_get(root, "traces");
+  const char *traces_str = yyjson_val_write(traces_val, 0, NULL);
+
+  yyjson_val *config_val = yyjson_obj_get(root, "map");
+  const char *config_str = yyjson_val_write(config_val, 0, NULL);
+
+  // TODO(taras)
+  // Here we will need to set the outcome (ranking)
+
+  const char *param_game[3] = {traces_str, config_str, "[]"};
 
   PGresult *res_ins =
       PQexecParams(conn,
@@ -930,6 +950,7 @@ ORDER BY\n\
   }
 
   PQclear(res_ins);
+  yyjson_doc_free(doc);
 
   // NOTE(taras)
   // Close this now as we are using the `username` from it,
