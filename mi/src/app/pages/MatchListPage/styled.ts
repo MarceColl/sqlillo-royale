@@ -15,5 +15,5 @@ export const List = styled.div`
 export const Match = styled.div`
   display: flex;
   padding: 0.5rem;
-  border: thin solid black;
+  background: #fff1;
 `;

@@ -1,3 +1,4 @@
+import { Button as RawButton } from "@/app/ui";
 import styled from "styled-components";
 
 export const Container = styled.div`
@@ -8,7 +9,16 @@ export const Container = styled.div`
 `;
 
 export const Header = styled.div`
+  position: absolute;
+  right: 1rem;
   display: flex;
   gap: 1rem;
-  justify-content: flex-end;
+  padding: 1rem;
+  z-index: 1;
+`;
+
+export const Button = styled(RawButton)`
+  font-size: 2rem;
+  line-height: 2rem;
+  padding: 0.5rem 1rem;
 `;
