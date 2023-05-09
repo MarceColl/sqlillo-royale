@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { PathParams } from "./types";
 import { build } from "./utils";
-import { useState } from "react";
+import { useCallback, useMemo } from "react";
 
 type RouterStore = {
   path: string;
@@ -11,6 +11,9 @@ type RouterStore = {
 export const useRouterStore = create<RouterStore>()((set) => ({
   path: window.location.hash.slice(1),
   setPath: (path: string) => {
+    if (window.location.hash !== `#${path}`) {
+      window.location.hash = `#${path}`;
+    }
     set({ path });
   },
 }));
@@ -24,20 +27,25 @@ type GoToInput<T extends string> =
   | string;
 
 const useRouter = () => {
-  const [state, setState] = useState<Record<string, unknown>>();
-  return {
-    goTo: <T extends string>(input: GoToInput<T>) => {
+  const { setPath, path } = useRouterStore();
+  const goTo = useCallback(
+    <T extends string>(input: GoToInput<T>) => {
       if (typeof input === "string") {
-        window.location.hash = `#${input}`;
+        setPath(input);
         return;
       }
-      const { path, params, state } = input;
-      window.location.hash = `#${build(path, params)}`;
-      setState(state);
+      const { path, params } = input;
+      setPath(build(path, params));
     },
-    state: <T extends Record<string, unknown>>() => state as T,
-    path: useRouterStore((state) => state.path),
-  };
+    [setPath]
+  );
+  return useMemo(
+    () => ({
+      goTo,
+      path,
+    }),
+    [goTo, path]
+  );
 };
 
 export { useRouter };

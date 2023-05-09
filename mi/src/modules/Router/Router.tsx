@@ -1,20 +1,20 @@
 import { useEffect } from "react";
-import { useRouterStore } from "./hooks";
+import { useRouter } from "./hooks";
 
 type Props = {
   children: React.ReactNode;
 };
 
 const Router = ({ children }: Props) => {
+  const { goTo } = useRouter();
   useEffect(() => {
     if (window.location.hash === "") {
-      window.location.hash = "#/";
+      goTo("/");
     }
-  }, []);
-  const setPath = useRouterStore((state) => state.setPath);
+  }, [goTo]);
   useEffect(() => {
     const handleHashChange = () => {
-      setPath(window.location.hash.slice(1));
+      goTo(window.location.hash.slice(1));
     };
     window.addEventListener("hashchange", handleHashChange);
     return () => {

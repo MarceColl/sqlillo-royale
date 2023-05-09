@@ -10,13 +10,16 @@ import {
   MatchPage,
 } from "@/app/pages";
 import { useAuth } from "./hooks";
+import { useEffect } from "react";
 
 const AppRoutes = () => {
   const { goTo } = useRouter();
   const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
-    goTo(Routes.login);
-  }
+  useEffect(() => {
+    if (!isAuthenticated) {
+      goTo(Routes.login);
+    }
+  }, [isAuthenticated, goTo]);
   return (
     <Router>
       <Route path={Routes.home}>
