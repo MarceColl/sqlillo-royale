@@ -1,8 +1,20 @@
 import { Form } from "grommet";
-import { Button, Card, CardBody, CardHeader, FormField, Main } from "@/app/ui";
+import {
+  Anchor,
+  Box,
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  FormField,
+  Heading,
+  Main,
+  Space,
+} from "@/app/ui";
 
 import { useAuth } from "@/app/hooks";
-import { useRouter } from "@/modules/Router";
+import { Link, useRouter } from "@/modules/Router";
 import { Routes } from "@/app/constants";
 
 type Credentials = {
@@ -33,33 +45,54 @@ const RegisterPage = () => {
   return (
     <Main align="center" justify="center">
       <Card>
-        <CardHeader>Register</CardHeader>
+        <CardHeader>
+          <Box justify="center">
+            <Heading size="small">Join the challenge</Heading>
+          </Box>
+        </CardHeader>
         <CardBody>
+          <Space small />
           <Form onSubmit={handleSubmit}>
             <FormField
               name="username"
               label="Username"
               disabled={register.isLoading}
             />
+            <Space small />
             <FormField
               name="password"
               label="Password"
+              type="password"
               disabled={register.isLoading}
             />
+            <Space small />
             <FormField
               name="repassword"
               label="Repeat Password"
               disabled={register.isLoading}
             />
-            <Button
-              primary
-              type="submit"
-              disabled={register.isLoading}
-              label="Register"
-              busy={register.isLoading}
-            />
+            <Space small />
+            <Box>
+              <Button
+                primary
+                type="submit"
+                disabled={register.isLoading}
+                label="Register"
+                size="large"
+                busy={register.isLoading}
+              />
+            </Box>
           </Form>
         </CardBody>
+        <CardFooter>
+          <div>
+            Or{" "}
+            <Link to={Routes.login}>
+              <Anchor label="register" margin="none" />
+            </Link>{" "}
+            if you already have an account
+          </div>
+        </CardFooter>
       </Card>
     </Main>
   );
