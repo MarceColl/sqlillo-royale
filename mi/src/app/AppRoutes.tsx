@@ -11,17 +11,21 @@ import {
 } from "@/app/pages";
 import { useAuth } from "./hooks";
 import { useEffect } from "react";
+import { IndexPage } from "./pages/IndexPage";
 
 const AppRoutes = () => {
   const { goTo } = useRouter();
   const { isAuthenticated } = useAuth();
   useEffect(() => {
     if (!isAuthenticated) {
-      goTo(Routes.login);
+      goTo(Routes.index);
     }
   }, [isAuthenticated, goTo]);
   return (
     <Router>
+      <Route path={Routes.index}>
+        <IndexPage />
+      </Route>
       <Route path={Routes.home}>
         <HomePage />
       </Route>

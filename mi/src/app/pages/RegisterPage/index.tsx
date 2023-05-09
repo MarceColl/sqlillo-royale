@@ -1,12 +1,5 @@
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Form,
-  FormField,
-  Main,
-} from "grommet";
+import { Form } from "grommet";
+import { Button, Card, CardBody, CardHeader, FormField, Main } from "@/app/ui";
 
 import { useAuth } from "@/app/hooks";
 import { useRouter } from "@/modules/Router";
