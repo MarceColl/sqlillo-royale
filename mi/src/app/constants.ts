@@ -12,5 +12,6 @@ export const Queries = {
   ranking: 'ranking',
   matchList: 'matchList',
   match: 'match',
+  matchData: 'matchData',
   code: 'code',
 };

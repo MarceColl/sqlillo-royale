@@ -17,6 +17,23 @@ func (api *Api) PublicGamesHandler(c *fiber.Ctx) error {
 	return c.JSON(games)
 }
 
+func (api *Api) PublicGameInfoByIdHandler(c *fiber.Ctx) error {
+	game := new(Game)
+
+	id := c.Params("id", "")
+
+	if id == "" {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	if err := api.db.NewSelect().Model(game).Where("id = ?", id).Scan(c.Context()); err != nil {
+		log.Printf("[WARN] Could not get game info for %s: %v\n", id, err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(game)
+}
+
 func (api *Api) PublicGameByIdHandler(c *fiber.Ctx) error {
 	var data []byte
 

@@ -32,8 +32,9 @@ func main() {
 	apiRoutes.Get("/ranking", NotImplementedHandler)
 
 	apiRoutes.Get("/carouselle", api.PublicCarouselleHandler)
-	apiRoutes.Get("/games/:id", api.PublicGameByIdHandler)
+	apiRoutes.Get("/games/:id", api.PublicGameInfoByIdHandler)
 	apiRoutes.Get("/games", api.PublicGamesHandler)
+	apiRoutes.Get("/games-data/:id", api.PublicGameByIdHandler)
 
 	private := apiRoutes.Group("/private")
 

@@ -11,12 +11,13 @@ const MatchListPage = () => {
     return <>Loading...</>;
   }
   const { matchList } = data;
+
   return (
     <S.Container>
       <S.List>
-        {matchList.map(({ id, name }, i) => {
+        {matchList.map(({ id, name }) => {
           return (
-            <S.Match>
+            <S.Match key={id}>
               <Link to={Routes.match} params={{ id }}>
                 {name}
               </Link>

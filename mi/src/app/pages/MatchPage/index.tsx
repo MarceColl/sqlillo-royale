@@ -20,14 +20,35 @@ const MatchPage = ({ matchId }: Props) => {
     },
     { refetchOnWindowFocus: false }
   );
-  const parsedTraces = useMemo(
-    () => mapTracesToFrontend(traces as RawMatch),
-    [traces]
+
+  const { data: gameData, isLoading: isDataLoading } = useQuery(
+    [Queries.matchData, matchId],
+    () => {
+      return API.getMatchData({ id: matchId });
+    },
+    { refetchOnWindowFocus: false }
   );
-  if (isLoading || !data) {
+
+  const parsedTraces = useMemo(
+    () => {
+      if (!data?.match.map || !gameData) {
+        return null;
+      }
+
+      return mapTracesToFrontend({
+        map: data?.match.map!,
+        traces: gameData
+      } as RawMatch)
+    },
+    [data?.match.map, gameData]
+  );
+
+  if (isLoading || !data || isDataLoading || !gameData || !parsedTraces) {
     return <>Loading...</>;
   }
+
   const { match } = data || {};
+
   return (
     <S.Container>
       <div>Seeing match: {match.name}</div>

@@ -138,9 +138,10 @@ export const getMatchList = async(): Promise<GetMatchListOutput> => {
   const games = await resp.json();
 
   return {
-    matchList: games.map(({id}: {id: string}) => {
+    matchList: games.map((game: any) => {
       return {
-        id, name: id,
+        ...game,
+        name: `${new Date(game.created_at).toLocaleString()}`, 
       }
     }),
   };
@@ -171,10 +172,27 @@ type GetMatchOutput = {
 export const getMatch = async({
   id,
 }: GetMatchInput): Promise<GetMatchOutput> => {
-  // TODO
-  console.log('[API] get match', id);
-  await wait(500);
+  const resp = await fetch(`${API_URL}/api/games/${id}`, {
+    method: 'GET',
+  });
+
+  const game = await resp.json();
+
   return {
-    match: {id, name: `Match ${id}`},
+    match: {
+      id: game.id,
+      name: `${new Date(game.created_at).toLocaleString()}`, 
+      map: game.config
+    },
   };
+};
+
+export const getMatchData = async({
+  id,
+}: GetMatchInput) => {
+  const resp = await fetch(`${API_URL}/api/games-data/${id}`, {
+    method: 'GET',
+  });
+
+  return resp.json();
 };
