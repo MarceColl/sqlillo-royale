@@ -22,7 +22,7 @@
 #include <SDL.h>
 #endif
 
-#define MAX_ENTITIES 5000
+#define MAX_ENTITIES 20000
 #define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
@@ -53,6 +53,21 @@ pthread_mutex_t done_cond_mut;
 PGconn *conn;
 
 typedef struct {
+  int tick;
+  int radius;
+  int speed;
+} cod_timing_t;
+
+cod_timing_t cod_timings[] = {
+  { .tick = 0, .radius = 5000, .speed = 20 },
+  { .tick = 5000, .radius = 150, .speed = 20 },
+  { .tick = 15000, .radius = 90, .speed = 20 },
+  { .tick = 30000, .radius = 40, .speed = 20 },
+  { .tick = 40000, .radius = 10, .speed = 20 },
+  { .tick = 50000, .radius = 0, .speed = 5 },
+};
+
+typedef struct {
   float x;
   float y;
 } vecf_t;
@@ -72,7 +87,7 @@ typedef struct {
   char *username;
   player_code_t code;
   float cd[NUM_SKILLS];
-  int8_t health;
+  int64_t health;
   int8_t used_skill;
   vecf_t skill_dir;
   bool stunned;
@@ -82,6 +97,12 @@ typedef struct {
   enum entity_type type;
   int owner;
 } entity_metadata_t;
+
+typedef struct {
+  float x;
+  float y;
+  float radius;
+} cod_t;
 
 typedef struct {
   /* Entities */
@@ -96,6 +117,8 @@ typedef struct {
 
   /* Map */
   float w, h;
+
+  cod_t cod;
 
   vecf_t dc_center;
   float dc_radius;
@@ -584,6 +607,28 @@ void update_traces(gamestate_t *gs) {
 
     yyjson_mut_arr_append(gs->traces_arr, item);
   }
+
+  yyjson_mut_val *key_type = yyjson_mut_str(gs->traces, "ty");
+  yyjson_mut_val *key_x = yyjson_mut_str(gs->traces, "x");
+  yyjson_mut_val *key_y = yyjson_mut_str(gs->traces, "y");
+  yyjson_mut_val *key_tick = yyjson_mut_str(gs->traces, "t");
+  yyjson_mut_val *key_radius = yyjson_mut_str(gs->traces, "r");
+
+  yyjson_mut_val *val_type = yyjson_mut_str(gs->traces, "cod");
+  yyjson_mut_val *num_x = yyjson_mut_real(gs->traces, gs->cod.x);
+  yyjson_mut_val *num_y = yyjson_mut_real(gs->traces, gs->cod.y);
+  yyjson_mut_val *num_radius = yyjson_mut_int(gs->traces, gs->cod.radius);
+  yyjson_mut_val *num_tick = yyjson_mut_int(gs->traces, tick);
+
+  yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
+
+  yyjson_mut_obj_add(item, key_x, num_x);
+  yyjson_mut_obj_add(item, key_y, num_y);
+  yyjson_mut_obj_add(item, key_radius, num_radius);
+  yyjson_mut_obj_add(item, key_tick, num_tick);
+  yyjson_mut_obj_add(item, key_type, val_type);
+
+  yyjson_mut_arr_append(gs->traces_arr, item);
 }
 
 void save_traces(gamestate_t *gs) {
@@ -691,6 +736,7 @@ ORDER BY\n\
       .threads = (pthread_t *)malloc(sizeof(pthread_t) * rows),
       .w = 500,
       .h = 500,
+      .cod = { .x = -1, .y = -1, .radius = -1 },
       .dc_active = false,
   };
 
@@ -743,9 +789,21 @@ ORDER BY\n\
   float curr_time = 0;
   printf("Starting match...\n");
 
-  while (curr_time <= GAME_LENGTH) {
+  vecf_t cod_center = { .x = 250, .y = 250 };
+  int current_cod = 0;
+  int alive_players = gs.n_players;
+
+  while (alive_players > 1) {
     pthread_mutex_lock(&inc_tick_cond_mut);
     tick += 1;
+
+    cod_timing_t *timing = &cod_timings[current_cod];
+    if (tick > timing->tick) {
+      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y, timing->radius);
+      // current_cod += 1;
+    }
+
+    printf("ALIVE: %d\n", alive_players);
 
     bool done = false;
     pthread_mutex_lock(&done_cond_mut);
@@ -781,9 +839,14 @@ ORDER BY\n\
     for (int i = 0; i < gs.active_entities; i++) {
       normalize(&gs.dir[i]);
       if (gs.meta[i].type == PLAYER) {
+	if (ptd[i].dead) { continue; }
         gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
         gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
         normalize(&gs.players[i].skill_dir);
+
+	if (dist(&cod_center, &gs.pos[i]) >= timing->radius) {
+	  gs.players[i].health -= 1;
+	}
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
@@ -836,8 +899,9 @@ ORDER BY\n\
           gs.pos[i].y = gs.h;
         }
 
-        if (gs.players[i].health <= 0) {
-          delete_entity(&gs, i);
+        if (gs.players[i].health <= 0 && !ptd[i].dead) {
+          // delete_entity(&gs, i);
+	  alive_players -= 1;
           ptd[i].dead = true;
         }
       } else if (gs.meta[i].type == SMALL_PROJ) {
