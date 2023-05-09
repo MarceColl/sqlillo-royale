@@ -76,4 +76,5 @@ export const Heading = styled(RawHeading)`
 export const Hehe = styled.div`
   font-style: italic;
   opacity: 0.5;
+  margin-top: -1rem;
 `;
