@@ -72,3 +72,8 @@ export const Dots = styled.img.attrs(() => ({
 export const Heading = styled(RawHeading)`
   z-index: 10;
 `;
+
+export const Hehe = styled.div`
+  font-style: italic;
+  opacity: 0.5;
+`;
