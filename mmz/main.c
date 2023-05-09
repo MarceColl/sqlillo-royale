@@ -460,8 +460,8 @@ void *player_thread(void *data) {
 
   int id = ptd->id;
   gamestate_t *gs = ptd->gs;
-  player_t this_player = gs->players[id];
-  char *code = this_player.code.code;
+  player_t *this_player = &gs->players[id];
+  char *code = this_player->code.code;
 
   if (luaL_loadstring(L, code) || lua_pcall(L, 0, 0, 0)) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
@@ -469,7 +469,7 @@ void *player_thread(void *data) {
   }
 
   luaL_loadstring(L, code);
-  call_bot_init(L, &this_player, gs);
+  call_bot_init(L, this_player, gs);
 
   printf("[INFO] Player #%d called `bot_init` OK!\n", id);
 
@@ -484,7 +484,7 @@ void *player_thread(void *data) {
       break;
     }
 
-    call_bot_main(L, &this_player, gs);
+    call_bot_main(L, this_player, gs);
 
     pthread_mutex_lock(&done_cond_mut);
     ptd->done = true;
@@ -728,16 +728,13 @@ ORDER BY\n\
       gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
                                            .code = PQgetvalue(res, i, 2)};
       gs.meta[i].type = PLAYER;
+	ptd[i] = (player_thread_data_t){
+	    .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
+
+	pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
 
       printf("Player #%d is %s\n", i, gs.players[i].username);
     }
-  }
-
-  for (int i = 0; i < gs.n_players; i++) {
-    ptd[i] = (player_thread_data_t){
-        .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
-
-    pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
   }
 
   printf("Setup %d players structures with %d max entities\n", gs.n_players,
