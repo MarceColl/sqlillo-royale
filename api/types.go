@@ -81,6 +81,7 @@ type GameToUser struct {
 	User     *User     `bun:"rel:belongs-to,join:username=username"`
 	GameID   uuid.UUID `bun:"type:uuid,pk"`
 	Game     *Game     `bun:"rel:belongs-to,join:game_id=id"`
+	Rank     int       `json:"rank" bun:",notnull"`
 
 	CodeID uuid.UUID `bun:"type:uuid"`
 }

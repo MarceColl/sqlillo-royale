@@ -97,6 +97,7 @@ typedef struct {
   int8_t used_skill;
   vecf_t skill_dir;
   bool stunned;
+  int rank;
 } player_t;
 
 typedef struct {
@@ -981,6 +982,7 @@ ORDER BY\n\
           // delete_entity(&gs, i);
 	  ranking[current_ranking].username = gs.players[i].username;
 	  ranking[current_ranking].tick = tick;
+	  gs.players[i].rank = current_ranking;
 	  current_ranking += 1;
 	  alive_players -= 1;
           ptd[i].dead = true;
@@ -1027,9 +1029,6 @@ ORDER BY\n\
 #endif
   }
 
-  // Update ranking in traces
-
-
 #if SAVE_TRACES
   save_traces(&gs);
   printf("Traces saved on disk!\n");
@@ -1057,9 +1056,6 @@ ORDER BY\n\
   yyjson_val *config_val = yyjson_obj_get(root, "map");
   const char *config_str = yyjson_val_write(config_val, 0, NULL);
 
-  // TODO(taras)
-  // Here we will need to set the outcome (ranking)
-
   const char *param_game[3] = {traces_str, config_str, "[]"};
 
   PGresult *res_ins =
@@ -1085,14 +1081,16 @@ ORDER BY\n\
   for (int i = 0; i < gs.n_players; i++) {
     pthread_cancel(gs.threads[i]);
 
-    const char *params_connection[3] = {gs.players[i].username, game_uuid,
-                                        gs.players[i].code.uuid};
+    char rank_str[50];
+    snprintf(rank_str, 50, "%d", gs.players[i].rank);
+    const char *params_connection[4] = {gs.players[i].username, game_uuid,
+                                        gs.players[i].code.uuid, rank_str};
 
     PGresult *res_ins_2 =
         PQexecParams(conn,
                      "INSERT INTO games_to_users (username, "
-                     "game_id, code_id) VALUES ($1, $2, $3)",
-                     3, NULL, params_connection, NULL, NULL, 0);
+                     "game_id, code_id, rank) VALUES ($1, $2, $3, $4)",
+                     4, NULL, params_connection, NULL, NULL, 0);
 
     pg_command_error_handler(res_ins_2);
     PQclear(res_ins_2);
