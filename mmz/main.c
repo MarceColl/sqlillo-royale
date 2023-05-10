@@ -59,12 +59,13 @@ typedef struct {
 } cod_timing_t;
 
 cod_timing_t cod_timings[] = {
-  { .tick = 0, .radius = 5000, .speed = 20 },
-  { .tick = 5000, .radius = 150, .speed = 20 },
-  { .tick = 15000, .radius = 90, .speed = 20 },
-  { .tick = 30000, .radius = 40, .speed = 20 },
-  { .tick = 40000, .radius = 10, .speed = 20 },
-  { .tick = 50000, .radius = 0, .speed = 5 },
+  { .tick = 0, .radius = 500, .speed = 20 },
+  { .tick = 800, .radius = 150, .speed = 5 },
+  { .tick = 1200, .radius = 90, .speed = 3 },
+  { .tick = 1500, .radius = 40, .speed = 3 },
+  { .tick = 1700, .radius = 10, .speed = 2 },
+  { .tick = 1900, .radius = 0, .speed = 1 },
+  { .tick = -1, .radius = -1, .speed = -1 },
 };
 
 typedef struct {
@@ -329,6 +330,46 @@ int vec_to_string(lua_State *L) {
   lua_pushfstring(L, "vec(%f, %f)", vec->x, vec->y);
   return 1;
 }
+
+#if MMZ_GRAPHICS_SUPPORT
+void DrawCircle(SDL_Renderer* renderer, int32_t centreX, int32_t centreY, int32_t radius) {
+    const int32_t diameter = (radius * 2);
+
+    int32_t x = (radius - 1);
+    int32_t y = 0;
+    int32_t tx = 1;
+    int32_t ty = 1;
+    int32_t error = (tx - diameter);
+
+    while (x >= y)
+    {
+    // Each of the following renders an octant of the circle
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
+
+      if (error <= 0)
+      {
+      	++y;
+      	error += ty;
+      	ty += 2;
+      }
+
+      if (error > 0)
+      {
+      	--x;
+      	tx += 2;
+      	error += (tx - diameter);
+      }
+
+    }
+}
+#endif
 
 static const struct luaL_Reg veclib_m[] = {
     {"add", vec_add},
@@ -791,6 +832,8 @@ ORDER BY\n\
 
   vecf_t cod_center = { .x = 250, .y = 250 };
   int current_cod = 0;
+  int current_radius = cod_timings[current_cod].radius;
+  int target_radius = cod_timings[current_cod].radius;
   int alive_players = gs.n_players;
 
   while (alive_players > 1) {
@@ -798,10 +841,30 @@ ORDER BY\n\
     tick += 1;
 
     cod_timing_t *timing = &cod_timings[current_cod];
-    if (tick > timing->tick) {
+    cod_timing_t *next_timing = &cod_timings[current_cod+1];
+    if (tick > next_timing->tick) {
+      if (next_timing->tick != -1) {
+	current_cod += 1;
+	timing = &cod_timings[current_cod];
+	next_timing = &cod_timings[current_cod+1];
+      }
+      gs.cod.x = cod_center.x;
+      gs.cod.y = cod_center.y;
+      target_radius = timing->radius;
       printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y, timing->radius);
-      // current_cod += 1;
     }
+
+    if (current_radius > target_radius) {
+      current_radius -= timing->speed;
+
+      if (current_radius < target_radius) {
+	current_radius = target_radius;
+      }
+    }
+
+    printf("RAD %d\n", current_radius);
+
+    gs.cod.radius = current_radius;
 
     printf("ALIVE: %d\n", alive_players);
 
@@ -844,14 +907,13 @@ ORDER BY\n\
         gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
         normalize(&gs.players[i].skill_dir);
 
-	if (dist(&cod_center, &gs.pos[i]) >= timing->radius) {
+	if (dist(&cod_center, &gs.pos[i]) >= current_radius) {
 	  gs.players[i].health -= 1;
 	}
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
-                          i);
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
             gs.players[i].cd[0] = 30;
             break;
           case 1:  // DASH
@@ -922,6 +984,9 @@ ORDER BY\n\
 #if MMZ_GRAPHICS_SUPPORT
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 162, 25, 255, SDL_ALPHA_OPAQUE);
+    DrawCircle(renderer, cod_center.x, cod_center.y, current_radius);
 
     for (int i = 0; i < gs.active_entities; i++) {
       if (ptd[i].dead) continue;
