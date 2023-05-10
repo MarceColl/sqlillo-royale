@@ -9,7 +9,7 @@ import (
 func (api *Api) PublicGamesHandler(c *fiber.Ctx) error {
 	var games []*Game = []*Game{}
 
-	if err := api.db.NewSelect().Model(&games).Scan(c.Context()); err != nil {
+	if err := api.db.NewSelect().Model(&games).Column("id", "config", "outcome", "created_at", "updated_at").OrderExpr("created_at DESC").Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not list games: %v\n", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}

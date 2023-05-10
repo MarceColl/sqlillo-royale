@@ -58,6 +58,11 @@ typedef struct {
   int speed;
 } cod_timing_t;
 
+typedef struct {
+  int tick;
+  char *username;
+} ranking_entry_t;
+
 cod_timing_t cod_timings[] = {
   { .tick = 0, .radius = 500, .speed = 20 },
   { .tick = 800, .radius = 150, .speed = 5 },
@@ -844,6 +849,9 @@ ORDER BY\n\
   int target_radius = cod_timings[current_cod].radius;
   int alive_players = gs.n_players;
 
+  ranking_entry_t *ranking = (ranking_entry_t*)malloc(sizeof(ranking_entry_t) * gs.n_players);
+  int current_ranking = 0;
+
   while (alive_players > 1) {
     pthread_mutex_lock(&inc_tick_cond_mut);
     tick += 1;
@@ -971,6 +979,9 @@ ORDER BY\n\
 
         if (gs.players[i].health <= 0 && !ptd[i].dead) {
           // delete_entity(&gs, i);
+	  ranking[current_ranking].username = gs.players[i].username;
+	  ranking[current_ranking].tick = tick;
+	  current_ranking += 1;
 	  alive_players -= 1;
           ptd[i].dead = true;
         }
@@ -1016,10 +1027,17 @@ ORDER BY\n\
 #endif
   }
 
+  // Update ranking in traces
+
+
 #if SAVE_TRACES
   save_traces(&gs);
   printf("Traces saved on disk!\n");
 #endif
+
+  for (int i = 0; i < gs.n_players; i++) {
+    printf("PLAYER %s: %d\n", ranking[i].username, ranking[i].tick);
+  }
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
   yyjson_doc *doc = yyjson_read(json, strlen(json), 0);

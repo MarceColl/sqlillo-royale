@@ -47,7 +47,7 @@ func (api *Api) PrivateCreateCodeHandler(c *fiber.Ctx, user User) error {
 func (api *Api) PrivateGamesHandler(c *fiber.Ctx, user User) error {
 	var games []*Game = []*Game{}
 
-	if err := api.db.NewSelect().Model(&games).Join("JOIN games_to_users AS g2u ON g.id = g2u.game_id").Where("g2u.username = ?", user.Username).Scan(c.Context()); err != nil {
+	if err := api.db.NewSelect().Model(&games).Column("id", "config", "outcome", "created_at", "updated_at").Join("JOIN games_to_users AS g2u ON g.id = g2u.game_id").Where("g2u.username = ?", user.Username).OrderExpr("created_at DESC").Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not list games of user %s: %v\n", user.Username, err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}

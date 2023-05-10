@@ -5,4 +5,3 @@ gcc -o mmz-bin *.c \
     $(pkg-config --cflags --libs lua) \
     -lm
     # $(pkg-config --cflags --libs sdl2) \
-
