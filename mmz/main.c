@@ -88,6 +88,28 @@ typedef struct {
   char *code;
 } player_code_t;
 
+typedef enum {
+  MT_NONE,
+  MT_VECTOR,
+  MT_TARGET,
+} movement_type_t;
+
+typedef enum {
+  MD_NONE,
+  MD_FORWARD,
+  MD_BACKWARDS,
+  MD_LEFT,
+  MD_RIGHT,
+} movement_dir_t;
+
+typedef struct {
+  movement_type_t type;
+  union {
+    vecf_t vec;
+    movement_dir_t direction;
+  } data;
+} player_movement_t;
+
 typedef struct {
   int id;
   char *username;
@@ -96,7 +118,10 @@ typedef struct {
   int64_t health;
   int8_t used_skill;
   vecf_t skill_dir;
+  int targeted_player; // If -1 no target, else player entity id
+  player_movement_t movement;
   bool stunned;
+  bool dead;
   int rank;
 } player_t;
 
@@ -226,6 +251,41 @@ static int entity_pos(lua_State *L) {
   return 1;
 }
 
+static int entity_type(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  switch (ent->gs->meta[ent->id].type) {
+  case PLAYER:
+    lua_pushstring(L, "player");
+    break;
+  case SMALL_PROJ:
+    lua_pushstring(L, "small_proj");
+    break;
+  default:
+    lua_pushstring(L, "unknown");
+    break;
+  }
+
+  return 1;
+}
+
+static int entity_alive(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  int alive = 0;
+  switch (ent->gs->meta[ent->id].type) {
+  case PLAYER:
+    alive = !ent->gs->players[ent->id].dead;
+    break;
+  default:
+    break;
+  }
+
+  lua_pushboolean(L, alive);
+
+  return 1;
+}
+
 int lua_entity_to_string(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
   lua_pushfstring(L, "<Entity id=%d type=%d>", ent->id, ent->type);
@@ -236,6 +296,8 @@ static const struct luaL_Reg entitylib_m[] = {
     {"__tostring", lua_entity_to_string},
     {"id", entity_id},
     {"pos", entity_pos},
+    {"type", entity_type},
+    {"alive", entity_alive},
     {NULL, NULL}};
 
 static const struct luaL_Reg entitylib_f[] = {{NULL, NULL}};
@@ -456,6 +518,7 @@ static int me_visible(lua_State *L) {
   for (int i = 0; i < gs->active_entities; i++) {
     vecf_t *other = &gs->pos[i];
     if ((me->p->id != i) && dist(&gs->pos[me->p->id], other) < 50) {
+      if (gs->meta[i].type == PLAYER && gs->players[i].dead) continue;
       lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
       luaL_getmetatable(L, "mimizu.entity");
       lua_setmetatable(L, -2);
@@ -469,6 +532,20 @@ static int me_visible(lua_State *L) {
   }
 
   return 1;
+}
+
+static int me_target(lua_State *L) {
+  me_t *me = (me_t *)lua_touserdata(L, 1);
+  lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 2);
+
+  if (ent->type == PLAYER) {
+    printf("Player %d targeted player %d\n", me->p->id, ent->id);
+    me->p->targeted_player = ent->id;
+  } else {
+    printf("Cannot target a non-player entity\n");
+  }
+
+  return 0;
 }
 
 static int me_cast(lua_State *L) {
@@ -486,10 +563,16 @@ static int me_cast(lua_State *L) {
 }
 
 static const struct luaL_Reg melib_m[] = {
-    {"health", me_health},   {"move", me_move},
-    {"id", me_id},           {"username", me_username},
-    {"visible", me_visible}, {"cast", me_cast},
-    {"pos", me_pos},         {NULL, NULL}};
+    {"health", me_health},
+    {"move", me_move},
+    {"id", me_id},
+    {"username", me_username},
+    {"visible", me_visible},
+    {"cast", me_cast},
+    {"pos", me_pos},
+    {"target", me_target},
+    {NULL, NULL}
+};
 
 static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
 
@@ -823,7 +906,14 @@ ORDER BY\n\
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
                                  .health = 100,
+				 // No skill used
                                  .used_skill = -1,
+				 // No default movement
+				 .movement = { .type = MT_NONE },
+				 // No target
+				 .targeted_player = -1,
+				 .dead = 0,
+				 // Not stunned
                                  .stunned = 0};
 
       gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
@@ -850,8 +940,8 @@ ORDER BY\n\
   int target_radius = cod_timings[current_cod].radius;
   int alive_players = gs.n_players;
 
-  ranking_entry_t *ranking = (ranking_entry_t*)malloc(sizeof(ranking_entry_t) * gs.n_players);
   int current_ranking = 0;
+  int current_ranking_tick = tick;
 
   while (alive_players > 1) {
     pthread_mutex_lock(&inc_tick_cond_mut);
@@ -879,11 +969,7 @@ ORDER BY\n\
       }
     }
 
-    printf("RAD %d\n", current_radius);
-
     gs.cod.radius = current_radius;
-
-    printf("ALIVE: %d\n", alive_players);
 
     bool done = false;
     pthread_mutex_lock(&done_cond_mut);
@@ -980,12 +1066,14 @@ ORDER BY\n\
 
         if (gs.players[i].health <= 0 && !ptd[i].dead) {
           // delete_entity(&gs, i);
-	  ranking[current_ranking].username = gs.players[i].username;
-	  ranking[current_ranking].tick = tick;
+	  if (current_ranking_tick != tick) {
+	    current_ranking_tick = tick;
+	    current_ranking += 1;
+	  }
 	  gs.players[i].rank = current_ranking;
-	  current_ranking += 1;
 	  alive_players -= 1;
           ptd[i].dead = true;
+	  gs.players[i].dead = true;
         }
       } else if (gs.meta[i].type == SMALL_PROJ) {
         gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED * 4;
@@ -1033,10 +1121,6 @@ ORDER BY\n\
   save_traces(&gs);
   printf("Traces saved on disk!\n");
 #endif
-
-  for (int i = 0; i < gs.n_players; i++) {
-    printf("PLAYER %s: %d\n", ranking[i].username, ranking[i].tick);
-  }
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
   yyjson_doc *doc = yyjson_read(json, strlen(json), 0);
