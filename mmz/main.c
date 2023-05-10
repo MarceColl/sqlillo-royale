@@ -22,7 +22,7 @@
 #include <SDL.h>
 #endif
 
-#define MAX_ENTITIES 5000
+#define MAX_ENTITIES 20000
 #define BASE_PLAYER_SPEED 20
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
@@ -53,6 +53,22 @@ pthread_mutex_t done_cond_mut;
 PGconn *conn;
 
 typedef struct {
+  int tick;
+  int radius;
+  int speed;
+} cod_timing_t;
+
+cod_timing_t cod_timings[] = {
+  { .tick = 0, .radius = 500, .speed = 20 },
+  { .tick = 800, .radius = 150, .speed = 5 },
+  { .tick = 1200, .radius = 90, .speed = 3 },
+  { .tick = 1500, .radius = 40, .speed = 3 },
+  { .tick = 1700, .radius = 10, .speed = 2 },
+  { .tick = 1900, .radius = 0, .speed = 1 },
+  { .tick = -1, .radius = -1, .speed = -1 },
+};
+
+typedef struct {
   float x;
   float y;
 } vecf_t;
@@ -72,7 +88,7 @@ typedef struct {
   char *username;
   player_code_t code;
   float cd[NUM_SKILLS];
-  int8_t health;
+  int64_t health;
   int8_t used_skill;
   vecf_t skill_dir;
   bool stunned;
@@ -82,6 +98,12 @@ typedef struct {
   enum entity_type type;
   int owner;
 } entity_metadata_t;
+
+typedef struct {
+  float x;
+  float y;
+  float radius;
+} cod_t;
 
 typedef struct {
   /* Entities */
@@ -96,6 +118,8 @@ typedef struct {
 
   /* Map */
   float w, h;
+
+  cod_t cod;
 
   vecf_t dc_center;
   float dc_radius;
@@ -313,6 +337,46 @@ int vec_to_string(lua_State *L) {
   lua_pushfstring(L, "vec(%f, %f)", vec->x, vec->y);
   return 1;
 }
+
+#if MMZ_GRAPHICS_SUPPORT
+void DrawCircle(SDL_Renderer* renderer, int32_t centreX, int32_t centreY, int32_t radius) {
+    const int32_t diameter = (radius * 2);
+
+    int32_t x = (radius - 1);
+    int32_t y = 0;
+    int32_t tx = 1;
+    int32_t ty = 1;
+    int32_t error = (tx - diameter);
+
+    while (x >= y)
+    {
+    // Each of the following renders an octant of the circle
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
+
+      if (error <= 0)
+      {
+      	++y;
+      	error += ty;
+      	ty += 2;
+      }
+
+      if (error > 0)
+      {
+      	--x;
+      	tx += 2;
+      	error += (tx - diameter);
+      }
+
+    }
+}
+#endif
 
 static const struct luaL_Reg veclib_m[] = {
     {"add", vec_add},
@@ -592,6 +656,28 @@ void update_traces(gamestate_t *gs) {
 
     yyjson_mut_arr_append(gs->traces_arr, item);
   }
+
+  yyjson_mut_val *key_type = yyjson_mut_str(gs->traces, "ty");
+  yyjson_mut_val *key_x = yyjson_mut_str(gs->traces, "x");
+  yyjson_mut_val *key_y = yyjson_mut_str(gs->traces, "y");
+  yyjson_mut_val *key_tick = yyjson_mut_str(gs->traces, "t");
+  yyjson_mut_val *key_radius = yyjson_mut_str(gs->traces, "r");
+
+  yyjson_mut_val *val_type = yyjson_mut_str(gs->traces, "cod");
+  yyjson_mut_val *num_x = yyjson_mut_real(gs->traces, gs->cod.x);
+  yyjson_mut_val *num_y = yyjson_mut_real(gs->traces, gs->cod.y);
+  yyjson_mut_val *num_radius = yyjson_mut_int(gs->traces, gs->cod.radius);
+  yyjson_mut_val *num_tick = yyjson_mut_int(gs->traces, tick);
+
+  yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
+
+  yyjson_mut_obj_add(item, key_x, num_x);
+  yyjson_mut_obj_add(item, key_y, num_y);
+  yyjson_mut_obj_add(item, key_radius, num_radius);
+  yyjson_mut_obj_add(item, key_tick, num_tick);
+  yyjson_mut_obj_add(item, key_type, val_type);
+
+  yyjson_mut_arr_append(gs->traces_arr, item);
 }
 
 void save_traces(gamestate_t *gs) {
@@ -699,6 +785,7 @@ ORDER BY\n\
       .threads = (pthread_t *)malloc(sizeof(pthread_t) * rows),
       .w = 500,
       .h = 500,
+      .cod = { .x = -1, .y = -1, .radius = -1 },
       .dc_active = false,
   };
 
@@ -751,9 +838,43 @@ ORDER BY\n\
   float curr_time = 0;
   printf("Starting match...\n");
 
-  while (curr_time <= GAME_LENGTH) {
+  vecf_t cod_center = { .x = 250, .y = 250 };
+  int current_cod = 0;
+  int current_radius = cod_timings[current_cod].radius;
+  int target_radius = cod_timings[current_cod].radius;
+  int alive_players = gs.n_players;
+
+  while (alive_players > 1) {
     pthread_mutex_lock(&inc_tick_cond_mut);
     tick += 1;
+
+    cod_timing_t *timing = &cod_timings[current_cod];
+    cod_timing_t *next_timing = &cod_timings[current_cod+1];
+    if (tick > next_timing->tick) {
+      if (next_timing->tick != -1) {
+	current_cod += 1;
+	timing = &cod_timings[current_cod];
+	next_timing = &cod_timings[current_cod+1];
+      }
+      gs.cod.x = cod_center.x;
+      gs.cod.y = cod_center.y;
+      target_radius = timing->radius;
+      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y, timing->radius);
+    }
+
+    if (current_radius > target_radius) {
+      current_radius -= timing->speed;
+
+      if (current_radius < target_radius) {
+	current_radius = target_radius;
+      }
+    }
+
+    printf("RAD %d\n", current_radius);
+
+    gs.cod.radius = current_radius;
+
+    printf("ALIVE: %d\n", alive_players);
 
     bool done = false;
     pthread_mutex_lock(&done_cond_mut);
@@ -789,14 +910,18 @@ ORDER BY\n\
     for (int i = 0; i < gs.active_entities; i++) {
       normalize(&gs.dir[i]);
       if (gs.meta[i].type == PLAYER) {
+	if (ptd[i].dead) { continue; }
         gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
         gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
         normalize(&gs.players[i].skill_dir);
 
+	if (dist(&cod_center, &gs.pos[i]) >= current_radius) {
+	  gs.players[i].health -= 1;
+	}
+
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
-                          i);
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
             gs.players[i].cd[0] = 30;
             break;
           case 1:  // DASH
@@ -844,8 +969,9 @@ ORDER BY\n\
           gs.pos[i].y = gs.h;
         }
 
-        if (gs.players[i].health <= 0) {
-          delete_entity(&gs, i);
+        if (gs.players[i].health <= 0 && !ptd[i].dead) {
+          // delete_entity(&gs, i);
+	  alive_players -= 1;
           ptd[i].dead = true;
         }
       } else if (gs.meta[i].type == SMALL_PROJ) {
@@ -866,6 +992,9 @@ ORDER BY\n\
 #if MMZ_GRAPHICS_SUPPORT
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 162, 25, 255, SDL_ALPHA_OPAQUE);
+    DrawCircle(renderer, cod_center.x, cod_center.y, current_radius);
 
     for (int i = 0; i < gs.active_entities; i++) {
       if (ptd[i].dead) continue;
