@@ -1,46 +1,42 @@
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { EntityKind, Match } from "./types";
 import { useRef } from "react";
-import { useCurrentTickRef } from "./hooks";
+import { MatchStore, useMatchStore } from "./matchStore";
 
 const tempBullets = new THREE.Object3D();
+const mapOffset = new THREE.Vector3();
 
-type Props = {
-  match: Match;
-};
+const bulletSizeSelector = (state: MatchStore) =>
+  state.gameState?.bullets.length;
 
-const Bullets = ({ match }: Props) => {
+const Bullets = () => {
   const material = new THREE.MeshToonMaterial({ color: "yellow" });
   const sphereGeometry = new THREE.SphereGeometry(0.5, 8, 8);
   const ref = useRef<THREE.InstancedMesh>(null);
-  const mapOffset = new THREE.Vector3(
-    -match.map.size[0] / 2,
-    0,
-    -match.map.size[1] / 2
-  );
-
-  const currentTickRef = useCurrentTickRef();
+  const bulletsLength = useMatchStore(bulletSizeSelector);
 
   useFrame(() => {
-    if (!currentTickRef.current) return;
     if (!ref.current) return;
-    const { current: currentTick } = currentTickRef;
-    for (const entity of match.ticks[currentTick].entities) {
-      if (entity.kind !== EntityKind.BULLET) continue;
-      // No bullets?
-      console.log(entity);
-      const [x, y] = entity.pos;
+    const { gameState, match } = useMatchStore.getState();
+    if (!match) return;
+    if (!gameState) return;
+    for (let i = 0; i < gameState.bullets.length; i++) {
+      const [x, y] = gameState.bullets[i].pos;
       tempBullets.position.set(x, 0, y);
+      mapOffset.set(-match.map.size[0] / 2, 0, -match.map.size[1] / 2);
       tempBullets.position.add(mapOffset);
       tempBullets.updateMatrix();
-      // TODO: identify bullets correctly
-      ref.current.setMatrixAt(entity.id - 4, tempBullets.matrix);
+      ref.current.setMatrixAt(i, tempBullets.matrix);
     }
     ref.current.instanceMatrix.needsUpdate = true;
   });
 
-  return <instancedMesh ref={ref} args={[sphereGeometry, material, 200]} />;
+  return (
+    <instancedMesh
+      ref={ref}
+      args={[sphereGeometry, material, bulletsLength || 0]}
+    />
+  );
 };
 
 export { Bullets };

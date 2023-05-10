@@ -1,4 +1,5 @@
 export * from "./LoginPage";
+export * from "./IndexPage";
 export * from "./HomePage";
 export * from "./MatchListPage";
 export * from "./RegisterPage";

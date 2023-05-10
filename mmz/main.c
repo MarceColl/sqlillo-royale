@@ -291,6 +291,13 @@ static int vec_sub(lua_State *L) {
   return 1;
 }
 
+static int vec_distance(lua_State *L) {
+  vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
+  vecf_t *vec2 = (vecf_t *)lua_touserdata(L, 2);
+  lua_pushnumber(L, dist(vec1, vec2));
+  return 1;
+}
+
 static int vec_x(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
   lua_pushnumber(L, vec1->x);
@@ -389,6 +396,7 @@ static const struct luaL_Reg veclib_m[] = {
 
 static const struct luaL_Reg veclib_f[] = {
     {"new", vec_new},
+    {"distance", vec_distance},
     {NULL, NULL},
 };
 
@@ -820,10 +828,10 @@ ORDER BY\n\
       gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
                                            .code = PQgetvalue(res, i, 2)};
       gs.meta[i].type = PLAYER;
-	ptd[i] = (player_thread_data_t){
-	    .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
+      ptd[i] = (player_thread_data_t){
+          .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
 
-	pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
+      pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
 
       printf("Player #%d is %s\n", i, gs.players[i].username);
     }

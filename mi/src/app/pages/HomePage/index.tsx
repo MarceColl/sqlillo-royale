@@ -1,6 +1,9 @@
 import { Routes } from "@/app/constants";
 import { useAuth } from "@/app/hooks";
 import { Link } from "@/modules/Router";
+import { Main } from "@/app/ui";
+
+import * as S from "./styled";
 
 const HomePage = () => {
   const { logout } = useAuth();
@@ -8,21 +11,20 @@ const HomePage = () => {
     logout();
   };
   return (
-    <div>
-      <h1>Home Page</h1>
-      <ul>
-        <li>
-          <Link to={Routes.editor}>Code</Link>
-        </li>
-        <li>
-          <Link to={Routes.matchList}>Matches</Link>
-        </li>
-        <li>
-          <Link to={Routes.ranking}>Ranking</Link>
-        </li>
-        <li onClick={handleLogout}>Logout</li>
-      </ul>
-    </div>
+    <Main>
+      <S.Menu>
+        <Link to={Routes.editor}>
+          <S.Button>Code</S.Button>
+        </Link>
+        <Link to={Routes.matchList}>
+          <S.Button>Matches</S.Button>
+        </Link>
+        <Link to={Routes.ranking}>
+          <S.Button>Ranking</S.Button>
+        </Link>
+        <S.Button onClick={handleLogout}>Logout</S.Button>
+      </S.Menu>
+    </Main>
   );
 };
 
