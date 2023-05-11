@@ -1,5 +1,10 @@
 import * as THREE from "three";
-import { Grid, OrbitControls, PerspectiveCamera } from "@react-three/drei";
+import {
+  Environment,
+  Grid,
+  OrbitControls,
+  PerspectiveCamera,
+} from "@react-three/drei";
 
 import domeVS from "@/app/shaders/dome.vs";
 import domeFS from "@/app/shaders/dome.fs";
@@ -81,6 +86,7 @@ const MatchScene = () => {
         far={2000}
         position={[matchMapSize * 2, matchMapSize * 2, 0]}
       />
+      <Environment preset="city" />
       <OrbitControls
         ref={obRef}
         target={[0, 1.75, 0]}

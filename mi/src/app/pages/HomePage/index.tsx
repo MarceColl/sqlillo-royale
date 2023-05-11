@@ -4,6 +4,9 @@ import { Link } from "@/modules/Router";
 import { Main } from "@/app/ui";
 import droidUrl from "@/app/assets/DROID.glb?url";
 
+import domeVS from "@/app/shaders/dome.vs";
+import domeFS from "@/app/shaders/dome.fs";
+
 import * as S from "./styled";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -12,6 +15,7 @@ import {
   Environment,
   useGLTF,
   Float,
+  Grid,
 } from "@react-three/drei";
 import * as THREE from "three";
 import { useRef } from "react";
@@ -65,7 +69,7 @@ const HomePage = () => {
     logout();
   };
   return (
-    <S.Main>
+    <Main>
       <Canvas camera={{ position: [20, 10, 0], fov: 50 }}>
         <ambientLight intensity={0.5} />
         <Float
@@ -81,17 +85,28 @@ const HomePage = () => {
           frames={1}
           scale={10}
           position={[0, -1, 0]}
-          far={10}
-          blur={6}
-          opacity={0.5}
-          color="#204080"
+          far={8}
+          blur={8}
+          opacity={0.3}
+          color="#6a80ab"
         />
-        <OrbitControls
-          autoRotate={true}
-          autoRotateSpeed={3}
-          target={[0, 5, 0]}
-          enableRotate={false}
-          enableZoom={false}
+        <mesh>
+          <sphereGeometry args={[200, 32, 32]} />
+          <shaderMaterial
+            attach="material"
+            vertexShader={domeVS}
+            fragmentShader={domeFS}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        <OrbitControls autoRotateSpeed={3} target={[0, 5, 0]} />
+        <Grid
+          cellColor="#666"
+          sectionColor="#444"
+          sectionSize={10}
+          cellSize={5}
+          args={[20, 20]}
+          fadeDistance={100}
         />
       </Canvas>
       <S.Menu>
@@ -106,7 +121,7 @@ const HomePage = () => {
         </Link>
         <S.Button onClick={handleLogout}>Logout</S.Button>
       </S.Menu>
-    </S.Main>
+    </Main>
   );
 };
 

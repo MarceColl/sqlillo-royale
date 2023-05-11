@@ -1,3 +1,4 @@
+import { FormPreviousLink } from "grommet-icons";
 import styled from "styled-components";
 
 export const Container = styled.div`
@@ -26,3 +27,17 @@ export const Match = styled.tr`
     padding: 1rem 0;
   }
 `;
+
+export const Back = styled.div`
+  position: absolute;
+  top: 3rem;
+  left: 3rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+export const BackIcon = styled(FormPreviousLink)``;

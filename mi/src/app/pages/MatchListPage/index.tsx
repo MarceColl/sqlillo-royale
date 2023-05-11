@@ -12,9 +12,11 @@ const MatchListPage = () => {
     return <>Loading...</>;
   }
   const { matchList } = data;
-
   return (
     <S.Container>
+      <S.Back onClick={() => window.history.back()}>
+        <S.BackIcon size="large" />
+      </S.Back>
       <S.List>
         <thead>
           <tr>
