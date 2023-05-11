@@ -36,11 +36,11 @@ const RegisterPage = () => {
     if (register.isLoading) return;
     try {
       await register.mutateAsync(value);
+      goTo(Routes.login);
     } catch (error) {
       // TODO: toasts
       alert(`Error: ${(error as Error).message}`);
     }
-    goTo(Routes.home);
   };
   return (
     <Main align="center" justify="center">

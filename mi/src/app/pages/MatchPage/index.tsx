@@ -36,7 +36,10 @@ const MatchPage = ({ matchId }: Props) => {
       return;
     }
     const { setMatch } = useMatchStore.getState();
-    const match = mapTracesToFrontend(data.match as RawMatch);
+    const match = mapTracesToFrontend({
+      map: data.match.map,
+      traces: gameData,
+    } as RawMatch);
     setMatch(match);
   }, [data?.match.map, gameData]);
 
@@ -44,11 +47,11 @@ const MatchPage = ({ matchId }: Props) => {
     return <>Loading...</>;
   }
 
-  //const { match } = data || {};
+  const { match } = data || {};
 
   return (
     <S.Container>
-      <div>Seeing match: FAKE</div>
+      <div>Seeing match: {match.name}</div>
       <S.MatchPlayer />
     </S.Container>
   );

@@ -28,7 +28,10 @@ export const useAuth = () => {
   const register = useMutation(API.register, {
     mutationKey: "register",
   });
-  const logout = () => setToken(null);
+  const logout = () => {
+    setToken(null);
+    window.location.reload();
+  };
 
   return {
     login: login,

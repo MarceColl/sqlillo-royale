@@ -29,11 +29,11 @@ const LoginPage = () => {
     if (login.isLoading) return;
     try {
       await login.mutateAsync(value);
+      goTo(Routes.home);
     } catch (error) {
       // TODO: toasts
       alert(`Error: ${(error as Error).message}`);
     }
-    goTo(Routes.home);
   };
   return (
     <Main align="center" justify="center">
