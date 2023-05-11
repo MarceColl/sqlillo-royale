@@ -9,6 +9,7 @@
 
 - _P0_ FEAT Be able to get ranking for a player, and for all players
 - FEAT Be able to return changelogs
+- FEAT get /user (name, ranking, customization)
 
 # RUNNER
 
