@@ -6,6 +6,7 @@ import { useRef } from "react";
 import codVS from "@/app/shaders/cod.vs";
 import codFS from "@/app/shaders/cod.fs";
 
+const mapOffset = new THREE.Vector3();
 const restPosition = new THREE.Vector3(5000, 5000, 5000);
 
 const Cod = () => {
@@ -24,7 +25,8 @@ const Cod = () => {
       cod.position.copy(restPosition);
       return;
     }
-    cod.position.set(x, 0, y);
+    mapOffset.set(-match.map.size[0] / 2, 0, -match.map.size[1] / 2);
+    cod.position.set(x, 0, y).add(mapOffset);
     cod.scale.set(radius, 1, radius);
   });
 

@@ -19,14 +19,12 @@ type Props = {
 
 export const MatchPlayer = ({ className }: Props) => {
   return (
-    <div className={className}>
+    <UI className={className}>
       <Canvas>
         <MatchScene />
       </Canvas>
-      <UI>
-        <Controls />
-        <PlayerList />
-      </UI>
-    </div>
+      <Controls />
+      <PlayerList />
+    </UI>
   );
 };
