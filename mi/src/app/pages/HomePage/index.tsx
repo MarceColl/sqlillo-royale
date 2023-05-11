@@ -6,7 +6,13 @@ import droidUrl from "@/app/assets/DROID.glb?url";
 
 import * as S from "./styled";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Environment, useGLTF } from "@react-three/drei";
+import {
+  OrbitControls,
+  ContactShadows,
+  Environment,
+  useGLTF,
+  Float,
+} from "@react-three/drei";
 import * as THREE from "three";
 import { useRef } from "react";
 
@@ -59,13 +65,34 @@ const HomePage = () => {
     logout();
   };
   return (
-    <Main>
+    <S.Main>
       <Canvas camera={{ position: [20, 10, 0], fov: 50 }}>
         <ambientLight intensity={0.5} />
-	<Model position={[0, 0.25, 0]} />
-	<Environment preset="city" />
-	<ContactShadows frames={1} scale={5} position={[0, -1, 0]} far={1} blur={5} opacity={0.5} color="#204080" />
-      <OrbitControls autoRotate={true} autoRotateSpeed={5.0}/>
+        <Float
+          speed={7}
+          rotationIntensity={0.3}
+          floatIntensity={0.5}
+          floatingRange={[1, 4]}
+        >
+          <Model position={[0, 3, 0]} />
+        </Float>
+        <Environment preset="city" />
+        <ContactShadows
+          frames={1}
+          scale={10}
+          position={[0, -1, 0]}
+          far={10}
+          blur={6}
+          opacity={0.5}
+          color="#204080"
+        />
+        {/* <OrbitControls
+          autoRotate={true}
+          autoRotateSpeed={5.0}
+          target={[0, 5, 0]}
+          enableRotate={false}
+          enableZoom={false}
+        /> */}
       </Canvas>
       <S.Menu>
         <Link to={Routes.editor}>
@@ -79,7 +106,7 @@ const HomePage = () => {
         </Link>
         <S.Button onClick={handleLogout}>Logout</S.Button>
       </S.Menu>
-    </Main>
+    </S.Main>
   );
 };
 

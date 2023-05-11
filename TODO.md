@@ -1,8 +1,7 @@
 # Frontend
 
-- BUG List of matches is borked, goes out of the screen
 - FEAT Add player and ranking in home, overlaid over 3D model
-- FEAT Lights on the bullets9
+- FEAT Lights on the bullets
 - FEAT Skins & custom models
 - FEAT Skin shop
 

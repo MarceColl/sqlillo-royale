@@ -1,6 +1,6 @@
 import { useQuery } from "react-query";
 
-import { Queries, Routes } from "@/app/constants";
+import { Queries } from "@/app/constants";
 import * as API from "@/app/API";
 import * as S from "./styled";
 

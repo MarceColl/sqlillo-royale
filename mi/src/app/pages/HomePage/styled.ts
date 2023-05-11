@@ -1,5 +1,6 @@
-import { Button as RawButton } from "@/app/ui";
+import { Button as RawButton, Main as RawMain } from "@/app/ui";
 import styled from "styled-components";
+import bgUrl from "@/app/assets/home_bg.jpg";
 
 export const Menu = styled.div`
   position: absolute;
@@ -20,4 +21,9 @@ export const Button = styled(RawButton)`
   &:hover {
     opacity: 1;
   }
+`;
+
+export const Main = styled(RawMain)`
+  background-image: url(${bgUrl});
+  background-size: cover;
 `;
