@@ -1,6 +1,6 @@
 import { useQuery } from "react-query";
 
-import { Queries } from "@/app/constants";
+import { Queries, Routes } from "@/app/constants";
 import * as API from "@/app/API";
 import * as S from "./styled";
 
@@ -10,12 +10,26 @@ const RankingPage = () => {
     return <>Loading...</>;
   }
   const { ranking } = data;
+
   return (
     <S.Container>
       <S.List>
-        {ranking.map(({ username }, i) => {
-          return <S.User>{username}</S.User>;
-        })}
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>user</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranking.map(({ id, username }, i) => {
+            return (
+              <S.Match key={id}>
+                <td>{i + 1}</td>
+                <td>{username}</td>
+              </S.Match>
+            );
+          })}
+        </tbody>
       </S.List>
     </S.Container>
   );

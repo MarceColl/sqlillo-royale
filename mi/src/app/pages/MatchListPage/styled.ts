@@ -6,14 +6,23 @@ export const Container = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10rem 0;
+  box-sizing: border-box;
+  overflow: auto;
 `;
 
-export const List = styled.div`
+export const List = styled.table`
   margin: 1rem;
-  max-width: 1024px;
+  width: 1000px;
+  max-width: 90vw;
+  margin: auto;
 `;
-export const Match = styled.div`
-  display: flex;
-  padding: 0.5rem;
-  background: #fff1;
+export const Match = styled.tr`
+  text-align: center;
+  th {
+    text-align: center;
+  }
+  td {
+    padding: 1rem 0;
+  }
 `;
