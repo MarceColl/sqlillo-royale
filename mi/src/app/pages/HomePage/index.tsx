@@ -68,6 +68,11 @@ const HomePage = () => {
   const handleLogout = async () => {
     logout();
   };
+  //TODO
+  const userInfo = {
+    username: "xXsuPerHot6969",
+    ranking: 1,
+  };
   return (
     <Main>
       <Canvas camera={{ position: [20, 10, 0], fov: 50 }}>
@@ -109,6 +114,10 @@ const HomePage = () => {
           fadeDistance={100}
         />
       </Canvas>
+      <S.UserInfo>
+        <S.Username>{userInfo.username}</S.Username>
+        <S.Ranking $ranking={userInfo.ranking}>#{userInfo.ranking}</S.Ranking>
+      </S.UserInfo>
       <S.Menu>
         <Link to={Routes.editor}>
           <S.Button>Code</S.Button>

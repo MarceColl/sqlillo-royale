@@ -1,6 +1,6 @@
 # Frontend
 
-- FEAT Add player and ranking in home, overlaid over 3D model
+- FEAT Add player and ranking in home, overlaid over 3D model (needs /user endpoint)
 - FEAT Lights on the bullets
 - FEAT Skins & custom models
 - FEAT Skin shop
