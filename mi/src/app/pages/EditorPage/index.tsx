@@ -31,6 +31,18 @@ const EditorPage = () => {
     setValue(data?.code || "");
   }, [data, setValue]);
 
+  useEffect(() => {
+    // save when ctrl+s is pressed
+    const handleSaveKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", handleSaveKey);
+    return () => window.removeEventListener("keydown", handleSaveKey);
+  });
+
   if (isLoading || value === null) {
     return <>Loading...</>;
   }
