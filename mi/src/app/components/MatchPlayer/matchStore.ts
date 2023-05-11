@@ -5,7 +5,6 @@ import { GameState, Match } from "./types";
 type State = {
   state: "paused" | "playing";
   tick: number;
-  gameState: GameState | null;
   match: Match | null;
   rate: number;
   followingPlayer: number | null;
@@ -13,7 +12,7 @@ type State = {
 
 type Actions = {
   setTick: (tick: number) => void;
-  setGameState: (tick: GameState) => void;
+  getGameState: () => GameState | null;
   setMatch: (match: Match) => void;
   play: () => void;
   pause: () => void;
@@ -26,10 +25,13 @@ type Actions = {
 export type MatchStore = State & Actions;
 
 export const useMatchStore = create<MatchStore>()(
-  subscribeWithSelector((set) => ({
+  subscribeWithSelector((set, get) => ({
     followingPlayer: null,
     match: null,
-    gameState: null,
+    getGameState: () => {
+      const { match, tick } = get();
+      return match?.ticks[tick] ?? null;
+    },
     state: "paused",
     tick: 0,
     rate: 1,
@@ -41,7 +43,6 @@ export const useMatchStore = create<MatchStore>()(
     rewindTicks: (amount: number) =>
       set((state) => ({ tick: Math.max(0, state.tick - amount) })),
     followPlayer: (id: number | null) => set({ followingPlayer: id }),
-    setGameState: (gameState: GameState) => set({ gameState }),
     setMatch: (match: Match) => set({ match }),
   }))
 );

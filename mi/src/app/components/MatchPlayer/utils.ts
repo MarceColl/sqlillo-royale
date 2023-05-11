@@ -2,6 +2,7 @@ import {
   BaseTrace,
   Bullet,
   COD,
+  CODTrace,
   Entity,
   EntityKind,
   Match,
@@ -27,10 +28,19 @@ function mapPlayerTrace({ h, ...rest }: PlayerTrace) {
   };
 }
 
+function mapCodTrace({ r, ...rest }: CODTrace) {
+  return {
+    ...mapBaseTrace(rest),
+    radius: r,
+  };
+}
+
 const mapTraceToEntityState = (t: Trace) => {
   switch (t.ty) {
     case EntityKind.PLAYER:
       return mapPlayerTrace(t);
+    case EntityKind.COD:
+      return mapCodTrace(t);
     default:
       return mapBaseTrace(t);
   }

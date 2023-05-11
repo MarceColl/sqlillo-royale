@@ -10,6 +10,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMatchStore } from "./matchStore";
 import { TICK_RATE_MS } from "./constants";
 import { useRef } from "react";
+import { Cod } from "./Cod";
 
 const followPos = new THREE.Object3D();
 // hex value from vec3(5.0 / 255.0, 10.0 / 255.0, 25.0 / 255.0);
@@ -23,14 +24,13 @@ const MatchScene = () => {
   const obRef = useRef<any>(null);
   // Advance state
   useFrame(({ clock }) => {
-    const { state, setTick, setGameState, match } = useMatchStore.getState();
+    const { state, setTick, match } = useMatchStore.getState();
     if (!match) return;
     const currentTick = Math.round(
       (clock.elapsedTime * TICK_RATE_MS) % match.ticks.length
     );
     if (state === "playing") {
       setTick(currentTick);
-      setGameState(match.ticks[currentTick]);
       if (!clock.running) {
         clock.start();
         clock.elapsedTime = currentTick / TICK_RATE_MS;
@@ -43,7 +43,8 @@ const MatchScene = () => {
   });
   // Orbit controls follow
   useFrame(() => {
-    const { gameState, followingPlayer, match } = useMatchStore.getState();
+    const { getGameState, followingPlayer, match } = useMatchStore.getState();
+    const gameState = getGameState();
     if (!gameState) return;
     if (!match) return;
     if (!followingPlayer) return;
@@ -75,7 +76,11 @@ const MatchScene = () => {
   const matchMapSize = useMatchStore(matchMapSizeSelector);
   return (
     <>
-      <PerspectiveCamera makeDefault far={2000} />
+      <PerspectiveCamera
+        makeDefault
+        far={2000}
+        position={[matchMapSize * 2, matchMapSize * 2, 0]}
+      />
       <OrbitControls
         ref={obRef}
         target={[0, 1.75, 0]}
@@ -99,12 +104,13 @@ const MatchScene = () => {
         sectionColor="#444"
         sectionSize={10}
         cellSize={5}
-        args={[matchMapSize]}
+        args={[matchMapSize, matchMapSize]}
         fadeDistance={800}
       />
       <group position={[0, 1.75, 0]}>
         <Bullets />
         <DroidPlayers />
+        <Cod />
       </group>
     </>
   );

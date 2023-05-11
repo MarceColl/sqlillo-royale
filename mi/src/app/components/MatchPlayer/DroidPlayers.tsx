@@ -10,7 +10,7 @@ const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
 
 const playersSizeSelector = (state: MatchStore) =>
-  state.gameState?.players.filter(({ health }) => health > 0).length || 0;
+  state.getGameState()?.players.filter(({ health }) => health > 0).length || 0;
 
 const DroidPlayers = () => {
   const { nodes, materials } = useGLTF(droidUrl) as any;
@@ -24,7 +24,8 @@ const DroidPlayers = () => {
   const playersLength = useMatchStore(playersSizeSelector);
 
   useFrame(() => {
-    const { gameState, match, tick } = useMatchStore.getState();
+    const { getGameState, match, tick } = useMatchStore.getState();
+    const gameState = getGameState();
     if (!match) return;
     if (!gameState) return;
     for (let i = 0; i < gameState.players.length; i++) {

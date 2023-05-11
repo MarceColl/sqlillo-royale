@@ -7,7 +7,7 @@ const tempBullets = new THREE.Object3D();
 const mapOffset = new THREE.Vector3();
 
 const bulletSizeSelector = (state: MatchStore) =>
-  state.gameState?.bullets.length;
+  state.getGameState()?.bullets.length;
 
 const Bullets = () => {
   const material = new THREE.MeshToonMaterial({ color: "yellow" });
@@ -17,7 +17,8 @@ const Bullets = () => {
 
   useFrame(() => {
     if (!ref.current) return;
-    const { gameState, match } = useMatchStore.getState();
+    const { getGameState, match } = useMatchStore.getState();
+    const gameState = getGameState();
     if (!match) return;
     if (!gameState) return;
     for (let i = 0; i < gameState.bullets.length; i++) {
@@ -34,8 +35,8 @@ const Bullets = () => {
   return (
     <group>
       <instancedMesh
-	ref={ref}
-	args={[sphereGeometry, material, bulletsLength || 0]}
+        ref={ref}
+        args={[sphereGeometry, material, bulletsLength || 0]}
       />
       <pointLight />
     </group>
