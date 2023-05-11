@@ -69,10 +69,10 @@ const HomePage = () => {
       <Canvas camera={{ position: [20, 10, 0], fov: 50 }}>
         <ambientLight intensity={0.5} />
         <Float
-          speed={7}
+          speed={6}
           rotationIntensity={0.3}
           floatIntensity={0.5}
-          floatingRange={[1, 4]}
+          floatingRange={[0.5, 4]}
         >
           <Model position={[0, 3, 0]} />
         </Float>
@@ -86,13 +86,13 @@ const HomePage = () => {
           opacity={0.5}
           color="#204080"
         />
-        {/* <OrbitControls
+        <OrbitControls
           autoRotate={true}
-          autoRotateSpeed={5.0}
+          autoRotateSpeed={3}
           target={[0, 5, 0]}
           enableRotate={false}
           enableZoom={false}
-        /> */}
+        />
       </Canvas>
       <S.Menu>
         <Link to={Routes.editor}>
