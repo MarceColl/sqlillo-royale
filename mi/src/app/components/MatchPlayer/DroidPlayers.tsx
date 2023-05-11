@@ -10,7 +10,7 @@ const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
 
 const playersSizeSelector = (state: MatchStore) =>
-  state.getGameState()?.players.filter(({ health }) => health > 0).length || 0;
+  state.getGameState()?.players.length || 0;
 
 const DroidPlayers = () => {
   const { nodes, materials } = useGLTF(droidUrl) as any;
@@ -31,14 +31,18 @@ const DroidPlayers = () => {
     for (let i = 0; i < gameState.players.length; i++) {
       const player = gameState.players[i];
       const isAlive = player.health > 0;
-      if (!isAlive) continue;
-      const [x, y] = player.pos;
-      tempPlayers.position.set(x, 0, y);
-      mapOffset.set(-match.map.size[0] / 2, 0, -match.map.size[1] / 2);
-      tempPlayers.position.add(mapOffset);
-      tempPlayers.rotation.set(0, Math.sin(tick / 10), 0);
-      tempColor.setRGB(...match.players[player.id].color);
-      tempPlayers.updateMatrix();
+      if (!isAlive) {
+        tempPlayers.position.set(0, match.map.size[0] * 3, 0);
+        tempPlayers.updateMatrix();
+      } else {
+        const [x, y] = player.pos;
+        tempPlayers.position.set(x, 0, y);
+        mapOffset.set(-match.map.size[0] / 2, 0, -match.map.size[1] / 2);
+        tempPlayers.position.add(mapOffset);
+        tempPlayers.rotation.set(0, Math.sin(tick / 10), 0);
+        tempColor.setRGB(...match.players[player.id].color);
+        tempPlayers.updateMatrix();
+      }
       for (const mesh of meshes) {
         if (!mesh.current) continue;
         mesh.current.setMatrixAt(i, tempPlayers.matrix);
