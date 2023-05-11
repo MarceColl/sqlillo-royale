@@ -1,7 +1,7 @@
 import { Queries } from "@/app/constants";
 import { useQuery } from "react-query";
 
-import traces from "@/../traces.json";
+//import traces from "@/../traces.json";
 
 import * as API from "@/app/API";
 import * as S from "./styled";
@@ -15,7 +15,6 @@ type Props = {
 };
 
 const MatchPage = ({ matchId }: Props) => {
-  /*
   const { data, isLoading } = useQuery(
     [Queries.match, matchId],
     () => {
@@ -31,23 +30,21 @@ const MatchPage = ({ matchId }: Props) => {
     },
     { refetchOnWindowFocus: false }
   );
-  */
 
   useEffect(() => {
-    // if (!data?.match.map || !gameData) {
-    //   return;
-    // }
+    if (!data?.match.map || !gameData) {
+      return;
+    }
     const { setMatch } = useMatchStore.getState();
-    const match = mapTracesToFrontend(traces as RawMatch);
+    const match = mapTracesToFrontend(data.match as RawMatch);
     setMatch(match);
-    // }, [data?.match.map, gameData]);
-  }, []);
+  }, [data?.match.map, gameData]);
 
-  // if (isLoading || !data || isDataLoading || !gameData) {
-  //   return <>Loading...</>;
-  // }
+  if (isLoading || !data || isDataLoading || !gameData) {
+    return <>Loading...</>;
+  }
 
-  // const { match } = data || {};
+  //const { match } = data || {};
 
   return (
     <S.Container>
