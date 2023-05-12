@@ -16,6 +16,17 @@ const RankingPage = () => {
       <S.Back onClick={() => window.history.back()}>
         <S.BackIcon size="large" />
       </S.Back>
+      <S.Heading>
+        Coming soon...
+      </S.Heading>
+    </S.Container>
+  )
+
+  return (
+    <S.Container>
+      <S.Back onClick={() => window.history.back()}>
+        <S.BackIcon size="large" />
+      </S.Back>
       <S.List>
         <thead>
           <tr>
