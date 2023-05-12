@@ -251,6 +251,8 @@ static int entity_pos(lua_State *L) {
   return 1;
 }
 
+static int 
+
 static int entity_type(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
@@ -502,6 +504,9 @@ static int me_pos(lua_State *L) {
 
 static int me_move(lua_State *L) {
   me_t *me = (me_t *)lua_touserdata(L, 1);
+  if (me == NULL) { return 0; }
+  if (me->p == NULL) { return 0; }
+  if (me->p->id == NULL) { return 0; }
   int eid = me->p->id;
   vecf_t *dir = (vecf_t *)lua_touserdata(L, 2);
   me->gs->dir[eid].x = dir->x;
