@@ -17,7 +17,7 @@ const CarousellePage = () => {
     return <>Loading...</>;
   }
 
-  return <MatchPage matchId={data.id} />;
+  return <MatchPage matchId={data.id} carouselle />;
 };
 
 export { CarousellePage };
