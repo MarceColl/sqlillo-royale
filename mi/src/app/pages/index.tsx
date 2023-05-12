@@ -6,3 +6,4 @@ export * from "./RegisterPage";
 export * from "./RankingPage";
 export * from "./EditorPage";
 export * from "./MatchPage";
+export * from "./CarousellePage";

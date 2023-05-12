@@ -2,6 +2,7 @@ export const PublicRoutes = {
   index: "/",
   login: "/login",
   register: "/register",
+  carouselle: "/carouselle",
 } as const;
 export const PrivateRoutes = {
   home: "/home",
@@ -23,4 +24,5 @@ export const Queries = {
   match: "match",
   matchData: "matchData",
   code: "code",
+  carouselle: "code",
 };

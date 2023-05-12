@@ -8,6 +8,7 @@ import {
   EditorPage,
   RankingPage,
   MatchPage,
+  CarousellePage,
 } from "@/app/pages";
 import { useAuth } from "./hooks";
 import { useEffect } from "react";
@@ -40,6 +41,9 @@ const AppRoutes = () => {
   }, [publicMatchings, privateMatchings, isAuthenticated]);
   return (
     <Router>
+      <Route path={Routes.carouselle}>
+        <CarousellePage />
+      </Route>
       <Route path={Routes.index}>
         <IndexPage />
       </Route>

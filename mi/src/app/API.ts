@@ -139,6 +139,19 @@ export const getAllCodes = async(): Promise<GetAllCodesOutput> => {
   }
 };
 
+export const getCarouselle = async(): Promise<Match> => {
+  const resp = await fetch(`${API_URL}/api/carouselle`, {
+    method: 'GET',
+    headers: {
+      // NOTE(taras)
+      // Maybe getting from local storage is not the best idea
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+
+  return (await resp.json()) as Match;
+};
+
 type GetMatchListOutput = {
   matchList: Match[]
 };
