@@ -694,6 +694,7 @@ void *player_thread(void *data) {
   printf("[INFO] Player #%d called `bot_init` OK!\n", id);
 
   while (true) {
+    printf("PLAYER #%d PRELOCK\n", id);
     pthread_mutex_lock(&inc_tick_cond_mut);
     while (ptd->curr_tick == tick) {
       pthread_cond_wait(&inc_tick_cond_var, &inc_tick_cond_mut);
