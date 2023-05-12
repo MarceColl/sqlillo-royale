@@ -1,3 +1,4 @@
+import { PlayerInfo } from "./PlayerInfo";
 import { MatchStore, useMatchStore } from "./matchStore";
 import * as S from "./styled";
 
@@ -12,22 +13,22 @@ const stateSelector = ({
 });
 
 export const PlayerList = () => {
-  const { followPlayer, followingPlayer, players } =
-    useMatchStore(stateSelector);
+  const { players } = useMatchStore(stateSelector);
   if (!players) {
     return null;
   }
   return (
     <S.PlayerListContainer>
-      {Object.values(players).map(({ name, id }) => (
-        <S.PlayerItem
-          key={id}
-          $following={id === followingPlayer}
-          onClick={() => followPlayer(id)}
-        >
-          {name}
-        </S.PlayerItem>
-      ))}
+      <S.CurrentPlayer>
+        <PlayerInfo id={1} name={"name"} />
+      </S.CurrentPlayer>
+      <S.OtherPlayers>
+        {Object.values(players).map(({ name, id }) => (
+          <S.PlayerItem>
+            <PlayerInfo name={name} id={id} />
+          </S.PlayerItem>
+        ))}
+      </S.OtherPlayers>
     </S.PlayerListContainer>
   );
 };

@@ -18,7 +18,6 @@ type Actions = {
   pause: () => void;
   advanceTicks: (amount: number) => void;
   rewindTicks: (amount: number) => void;
-
   followPlayer: (id: number | null) => void;
 };
 
@@ -31,6 +30,10 @@ export const useMatchStore = create<MatchStore>()(
     getGameState: () => {
       const { match, tick } = get();
       return match?.ticks[tick] ?? null;
+    },
+    getPlayerInfo: (infoId: number) => {
+      const { match, tick } = get();
+      return match?.ticks[tick].players.find(({ id }) => id === infoId) ?? null;
     },
     state: "paused",
     tick: 0,
