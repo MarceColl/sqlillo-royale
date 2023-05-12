@@ -42,7 +42,7 @@ export const PlayerListContainer = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-height: 50vh;
+  max-height: 90vh;
   min-height: 70px;
   padding: 1rem;
   width: 300px;
@@ -63,7 +63,7 @@ export const PlayerInfo = styled.div`
 `;
 
 export const Name = styled.div`
-  font-size: 2rem;
+  font-size: 1rem;
 `;
 
 export const OtherPlayers = styled.div`
@@ -73,8 +73,8 @@ export const OtherPlayers = styled.div`
   background-color: #111;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem 0;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
 `;
 
 export const Color = styled.div<{ $color: string }>`
@@ -102,5 +102,5 @@ export const ViewIcon = styled(View)``;
 export const NoViewIcon = styled(FormViewHide)``;
 
 export const CurrentPlayer = styled.div`
-  padding: 0 0 1rem;
+  padding: 0 0 0.5rem;
 `;
