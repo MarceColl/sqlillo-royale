@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { GameState, Match } from "./types";
+import { GameState, Match, PlayerInfo } from "./types";
 
 type State = {
   carouselle?: boolean;
@@ -9,17 +9,17 @@ type State = {
   match: Match | null;
   rate: number;
   followingPlayer: number | null;
+  currentPlayer: PlayerInfo | null;
 };
 
 type Actions = {
   setTick: (tick: number) => void;
   getGameState: () => GameState | null;
-  setMatch: (match: Match, carouselle?: boolean) => void;
+  setState: (state: Partial<State>) => void;
   play: () => void;
   pause: () => void;
   advanceTicks: (amount: number) => void;
   rewindTicks: (amount: number) => void;
-
   followPlayer: (id: number | null) => void;
 };
 
@@ -28,10 +28,15 @@ export type MatchStore = State & Actions;
 export const useMatchStore = create<MatchStore>()(
   subscribeWithSelector((set, get) => ({
     followingPlayer: null,
+    currentPlayer: null,
     match: null,
     getGameState: () => {
       const { match, tick } = get();
       return match?.ticks[tick] ?? null;
+    },
+    getPlayerInfo: (infoId: number) => {
+      const { match, tick } = get();
+      return match?.ticks[tick].players.find(({ id }) => id === infoId) ?? null;
     },
     state: "paused",
     tick: 0,
@@ -44,6 +49,6 @@ export const useMatchStore = create<MatchStore>()(
     rewindTicks: (amount: number) =>
       set((state) => ({ tick: Math.max(0, state.tick - amount) })),
     followPlayer: (id: number | null) => set({ followingPlayer: id }),
-    setMatch: (match: Match, carouselle?: boolean) => set({ match, carouselle, state: 'playing' }),
+    setState: (state: Partial<State>) => set({ ...state }),
   }))
 );

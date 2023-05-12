@@ -27,6 +27,7 @@ const DroidPlayers = () => {
     const { getGameState, match, tick } = useMatchStore.getState();
     const gameState = getGameState();
     if (!match) return;
+    if (!match.players) return;
     if (!gameState) return;
     for (let i = 0; i < gameState.players.length; i++) {
       const player = gameState.players[i];
@@ -40,7 +41,8 @@ const DroidPlayers = () => {
         mapOffset.set(-match.map.size[0] / 2, 0, -match.map.size[1] / 2);
         tempPlayers.position.add(mapOffset);
         tempPlayers.rotation.set(0, Math.sin(tick / 10), 0);
-        tempColor.setRGB(...match.players[player.id].color);
+        const color = match.players[player.id].color || [1, 1, 1];
+        tempColor.setRGB(...color);
         tempPlayers.updateMatrix();
       }
       for (const mesh of meshes) {

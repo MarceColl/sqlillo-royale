@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/websocket/v2"
 )
 
 func main() {
@@ -47,6 +48,8 @@ func main() {
 	private.Post("/codes", api.WithUser(api.PrivateCreateCodeHandler))
 
 	private.Get("/games", api.WithUser(api.PrivateGamesHandler))
+
+	apiRoutes.Get("/games/:id/ws", websocket.New(api.PublicGameByIdWsHandler))
 
 	port := os.Getenv("PORT")
 

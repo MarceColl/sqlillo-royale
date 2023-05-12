@@ -10,7 +10,8 @@ import {
   Anchor as GrommetAnchor,
   Heading as GrommetHeading,
 } from "grommet";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import { theme } from "./theme";
 
 export const Card = styled(GrommetCard)`
   position: relative;
@@ -18,6 +19,7 @@ export const Card = styled(GrommetCard)`
   box-shadow: none;
   border: thin solid #333;
   padding: 2rem;
+  background-color: ${theme.global.colors.background.dark};
 `;
 
 export const Box = styled(GrommetBox)``;
@@ -36,14 +38,7 @@ export const CardFooter = styled.div`
 `;
 export const Form = styled(GrommetForm)``;
 export const Heading = styled(GrommetHeading)``;
-export const Anchor = styled(GrommetAnchor).attrs(() => ({
-  color: "brand-tertiary",
-}))``;
-export const FormField = styled(GrommetFormField)`
-  label {
-    margin: 0;
-  }
-`;
+
 export const Main = styled(GrommetMain)``;
 
 export const Space = styled.div<{
@@ -59,4 +54,17 @@ export const Space = styled.div<{
   ${({ medium }) => medium && "width: 2rem; height: 2rem;"}
   ${({ big }) => big && "width: 4rem; height: 4rem;"}
   ${({ spring }) => spring && "flex: 1;"}
+`;
+
+export const Anchor = styled(GrommetAnchor).attrs(() => ({
+  color: "brand-tertiary",
+}))``;
+export const FormField = styled(GrommetFormField)`
+  label {
+    margin: 0;
+  }
+`;
+
+export const ShiftBy = styled.div<{ $x?: number; $y?: number }>`
+  transform: ${({ $x, $y }) => css`translate(${$x}px, ${$y}px);`};
 `;
