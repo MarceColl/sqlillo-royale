@@ -251,8 +251,6 @@ static int entity_pos(lua_State *L) {
   return 1;
 }
 
-static int 
-
 static int entity_type(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
