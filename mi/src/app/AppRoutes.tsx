@@ -1,5 +1,5 @@
-import { Routes } from "./constants";
-import { Router, Route, useRouter } from "@/modules/Router";
+import { PrivateRoutes, PublicRoutes, Routes } from "./constants";
+import { Router, Route, useRouter, useMatcher } from "@/modules/Router";
 import {
   LoginPage,
   HomePage,
@@ -16,11 +16,28 @@ import { IndexPage } from "./pages/IndexPage";
 const AppRoutes = () => {
   const { goTo } = useRouter();
   const { isAuthenticated } = useAuth();
+  const publicMatchings = useMatcher(Object.values(PublicRoutes));
+  const privateMatchings = useMatcher(Object.values(PrivateRoutes));
   useEffect(() => {
-    if (!isAuthenticated) {
-      goTo(Routes.index);
+    const isAccessingPublic = Object.values(publicMatchings).some(
+      ({ isMatch }) => isMatch
+    );
+    const isAccessingPrivate = Object.values(privateMatchings).some(
+      ({ isMatch }) => isMatch
+    );
+    if (isAccessingPublic) {
+      if (isAuthenticated) {
+        goTo(Routes.home);
+        return;
+      }
     }
-  }, [isAuthenticated, goTo]);
+    if (isAccessingPrivate) {
+      if (!isAuthenticated) {
+        goTo(Routes.login);
+        return;
+      }
+    }
+  }, [publicMatchings, privateMatchings, isAuthenticated]);
   return (
     <Router>
       <Route path={Routes.index}>

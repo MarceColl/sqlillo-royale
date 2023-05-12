@@ -1,4 +1,4 @@
-import { useRouter } from "./hooks";
+import { useRouteMatch } from "./hooks";
 import { PathParams } from "./types";
 
 type Props<T extends string> = {
@@ -29,25 +29,10 @@ type Props<T extends string> = {
  * ```
  */
 const Route = <T extends string>({ children, path }: Props<T>) => {
-  const { path: currentPathname } = useRouter();
-  const parts = path.split("/");
-  const variables = Object.fromEntries(
-    parts
-      .map((p, i) => [i, p] as const)
-      .filter(([_, p]) => p.startsWith(":"))
-      .map(([i, p]) => [i, p.slice(1)])
-  );
+  const { isMatch, params } = useRouteMatch(path);
+  if (!isMatch) return null;
 
-  const urlMatcher = parts
-    .map((p, i) => (i in variables ? `(?<${variables[i]}>[^/]+)` : p))
-    .join("\\/");
-  const matcher = new RegExp(`^${urlMatcher}$`);
-
-  const match = currentPathname.match(matcher);
-  if (!match) return null;
-  const values = match.groups as PathParams<T>;
-
-  return <>{typeof children === "function" ? children(values) : children}</>;
+  return <>{typeof children === "function" ? children(params) : children}</>;
 };
 
 export { Route };

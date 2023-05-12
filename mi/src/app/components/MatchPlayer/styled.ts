@@ -5,6 +5,7 @@ import {
   PauseFill,
   PlayFill,
 } from "grommet-icons";
+import { Card } from "@/app/ui";
 
 export const ControlsContainer = styled.div`
   position: absolute;
@@ -32,12 +33,11 @@ export const PauseIcon = styled(PauseFill).attrs({ color: "#fff" })``;
 export const PreviousIcon = styled(CaretLeftFill).attrs({ color: "#fff" })``;
 export const NextIcon = styled(CaretRightFill).attrs({ color: "#fff" })``;
 
-export const PlayerListContainer = styled.div`
+export const PlayerListContainer = styled(Card)`
   position: absolute;
   top: 50%;
   left: 2rem;
   transform: translateY(-50%);
-  background-color: #712fff;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
