@@ -663,6 +663,10 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
   call_bot_fn(L, p, gs, "bot_init");
 }
 
+void too_much_instr_hook(lua_State *L, lua_Debug *ar) {
+  luaL_error(L, "TOO MUCH");
+}
+
 void *player_thread(void *data) {
   player_thread_data_t *ptd = (player_thread_data_t *)data;
   lua_State *L = luaL_newstate();
@@ -671,6 +675,8 @@ void *player_thread(void *data) {
   luaopen_entitylib(L);
   luaopen_veclib(L);
   luaopen_codlib(L);
+
+  lua_sethook(L, too_much_instr_hook, LUA_MASKCOUNT, 150000);
 
   int id = ptd->id;
   gamestate_t *gs = ptd->gs;
