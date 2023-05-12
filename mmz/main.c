@@ -504,9 +504,9 @@ static int me_move(lua_State *L) {
   me_t *me = (me_t *)lua_touserdata(L, 1);
   if (me == NULL) { return 0; }
   if (me->p == NULL) { return 0; }
-  if (me->p->id == NULL) { return 0; }
   int eid = me->p->id;
   vecf_t *dir = (vecf_t *)lua_touserdata(L, 2);
+  if (dir == NULL) { return 0; }
   me->gs->dir[eid].x = dir->x;
   me->gs->dir[eid].y = dir->y;
   return 0;
