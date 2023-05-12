@@ -1,5 +1,10 @@
+import { Heading as RawHeading } from "@/app/ui";
 import { FormPreviousLink } from "grommet-icons";
 import styled from "styled-components";
+
+export const Heading = styled(RawHeading)`
+  z-index: 10;
+`;
 
 export const Container = styled.div`
   flex: 1;
