@@ -1,4 +1,7 @@
-import { Routes } from "@/app/constants";
+import { useQuery } from "react-query";
+
+import { Queries, Routes } from "@/app/constants";
+import * as API from "@/app/API";
 import { useAuth } from "@/app/hooks";
 import { Link } from "@/modules/Router";
 import { Main } from "@/app/ui";
@@ -68,11 +71,11 @@ const HomePage = () => {
   const handleLogout = async () => {
     logout();
   };
-  //TODO
-  const userInfo = {
-    username: "xXsuPerHot6969",
-    ranking: 1,
-  };
+
+  const { data } = useQuery([Queries.userInfo], API.getUserInfo);
+  const username = data?.username || "...";
+  const ranking = data?.ranking;
+
   return (
     <Main>
       <Canvas camera={{ position: [20, 10, 0], fov: 50 }}>
@@ -115,8 +118,10 @@ const HomePage = () => {
         />
       </Canvas>
       <S.UserInfo>
-        <S.Username>{userInfo.username}</S.Username>
-        <S.Ranking $ranking={userInfo.ranking}>#{userInfo.ranking}</S.Ranking>
+        Hi, <S.Username>{username}</S.Username>
+        {ranking && (
+          <S.Ranking $ranking={ranking}>#{ranking}</S.Ranking>
+        )}
       </S.UserInfo>
       <S.Menu>
         <Link to={Routes.editor}>

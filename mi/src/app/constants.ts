@@ -17,6 +17,7 @@ export const Routes = {
 };
 
 export const Queries = {
+  userInfo: "userInfo",
   ranking: "ranking",
   matchList: "matchList",
   match: "match",

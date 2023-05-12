@@ -1,0 +1,1 @@
+ALTER TABLE games_to_users ADD COLUMN rank int NOT NULL DEFAULT 0;
