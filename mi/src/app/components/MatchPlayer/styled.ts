@@ -42,7 +42,7 @@ export const PlayerListContainer = styled(Card)`
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-height: 90vh;
+  max-height: 50vh;
   min-height: 70px;
   padding: 1rem;
   width: 300px;
@@ -68,7 +68,8 @@ export const Name = styled.div`
 
 export const OtherPlayers = styled.div`
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   background-color: #111;
   display: flex;
   flex-direction: column;

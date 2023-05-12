@@ -55,7 +55,7 @@ const MatchScene = () => {
     if (!followingPlayer) return;
     const player = gameState.players.find(({ id }) => followingPlayer === id);
     if (!player || !obRef.current) return;
-    if (followingPlayer) {
+    if (followingPlayer !== null) {
       const [x, y] = player.pos;
       const { current: ob } = obRef;
       followPos.position.set(

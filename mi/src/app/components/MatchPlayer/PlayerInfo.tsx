@@ -1,5 +1,5 @@
 import { ShiftBy } from "@/app/ui";
-import { Bar } from "../Bar";
+//import { Bar } from "../Bar";
 import { MatchStore, useMatchStore } from "./matchStore";
 import * as S from "./styled";
 
@@ -16,10 +16,18 @@ type Props = {
 export const PlayerInfo = ({ id, name }: Props) => {
   const { followPlayer, followingPlayer } = useMatchStore(stateSelector);
   // TODO: subscribe to gamestate
-  const health = 100;
+  // const health = 100;
+  const handleToggleFollow = () => {
+    console.log("following", followingPlayer, id);
+    if (followingPlayer === id) {
+      followPlayer(null);
+    } else {
+      followPlayer(id);
+    }
+  };
   return (
     <>
-      <S.PlayerInfo onClick={() => followPlayer(id)}>
+      <S.PlayerInfo onClick={handleToggleFollow}>
         <S.Color $color={"transparent"}>
           <ShiftBy $x={-1} $y={2}>
             {followingPlayer === id ? <S.NoViewIcon /> : <S.ViewIcon />}
@@ -29,7 +37,7 @@ export const PlayerInfo = ({ id, name }: Props) => {
           <S.NameNameContainer>
             <S.Name>{name}</S.Name>
           </S.NameNameContainer>
-          <Bar completion={health || 0} />
+          {/* TODO: health<Bar completion={health || 0} /> */}
         </S.NameContainer>
       </S.PlayerInfo>
     </>

@@ -47,12 +47,14 @@ export type Map = {
 export type PlayerInfo = {
   name: string;
   id: number;
-  color: [number, number, number];
+  color?: [number, number, number];
 };
 
 export type MatchInfo = {
+  id?: number;
+  name: string;
   map: Map;
-  players: Record<number, PlayerInfo>;
+  players?: Record<number, PlayerInfo>;
 };
 
 export type Match = MatchInfo & {
@@ -94,7 +96,12 @@ export type Trace = PlayerTrace | BulletTrace | CODTrace;
 
 export type RawMap = { height: number; weight: number };
 
-export type RawMatch = {
+export type RawMatchInfo = {
+  id: string;
   map: RawMap;
+  name: string;
+};
+
+export type RawMatch = RawMatchInfo & {
   traces: Trace[];
 };

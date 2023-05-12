@@ -1,51 +1,54 @@
-import {wait} from '../utils';
+import { wait } from "../utils";
+import { Match, RawMatchInfo } from "./components/MatchPlayer/types";
 
-import {Match, User} from './types';
+import { User } from "./types";
 
 // The API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 ///////////////
 // Mutations
 ///////////////
 
 type LoginInput = {
-  username: string; password: string
+  username: string;
+  password: string;
 };
 type LoginOutput = {
-  token: string
+  token: string;
 };
-export const login = async({
+export const login = async ({
   username,
   password,
 }: LoginInput): Promise<LoginOutput> => {
   const resp = await fetch(`${API_URL}/api/login`, {
-    method: 'POST',
-    body: JSON.stringify({username, password}),
+    method: "POST",
+    body: JSON.stringify({ username, password }),
   });
 
   const json = await resp.json();
 
-  return {token: json.token};
+  return { token: json.token };
 };
 
 type RegisterInput = {
-  username: string; password: string
+  username: string;
+  password: string;
 };
 type RegisterOutput = {
-  success: boolean
+  success: boolean;
 };
-export const register = async({
+export const register = async ({
   username,
   password,
 }: RegisterInput): Promise<RegisterOutput> => {
   const resp = await fetch(`${API_URL}/api/register`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify({
       username,
       password,
       // NOTE(taras): XD
-      password2: password
+      password2: password,
     }),
   });
 
@@ -55,21 +58,21 @@ export const register = async({
 };
 
 type SaveCodeInput = {
-  value: string
+  value: string;
 };
 type SaveCodeOutput = {
-  success: boolean
+  success: boolean;
 };
-export const saveCode = async({
+export const saveCode = async ({
   value: code,
 }: SaveCodeInput): Promise<SaveCodeOutput> => {
   const resp = await fetch(`${API_URL}/api/private/codes`, {
-    method: 'POST',
-    body: JSON.stringify({code}),
+    method: "POST",
+    body: JSON.stringify({ code }),
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -86,13 +89,13 @@ type GetUserInfo = {
   username: string;
   ranking?: number;
 };
-export const getUserInfo = async() => {
+export const getUserInfo = async () => {
   const resp = await fetch(`${API_URL}/api/private/user`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -100,15 +103,16 @@ export const getUserInfo = async() => {
 };
 
 type GetLastCodeOutput = {
-  id: string; code: string;
+  id: string;
+  code: string;
 };
-export const getLastCode = async(): Promise<GetLastCodeOutput|null> => {
+export const getLastCode = async (): Promise<GetLastCodeOutput | null> => {
   const resp = await fetch(`${API_URL}/api/private/codes`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -124,28 +128,28 @@ export const getLastCode = async(): Promise<GetLastCodeOutput|null> => {
 type GetAllCodesOutput = {
   codes: GetLastCodeOutput[];
 };
-export const getAllCodes = async(): Promise<GetAllCodesOutput> => {
+export const getAllCodes = async (): Promise<GetAllCodesOutput> => {
   const resp = await fetch(`${API_URL}/api/private/codes`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
   return {
-    codes: await resp.json()
-  }
+    codes: await resp.json(),
+  };
 };
 
-export const getCarouselle = async(): Promise<Match> => {
+export const getCarouselle = async (): Promise<Match> => {
   const resp = await fetch(`${API_URL}/api/carouselle`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -153,15 +157,15 @@ export const getCarouselle = async(): Promise<Match> => {
 };
 
 type GetMatchListOutput = {
-  matchList: Match[]
+  matchList: Match[];
 };
-export const getMatchList = async(): Promise<GetMatchListOutput> => {
+export const getMatchList = async (): Promise<GetMatchListOutput> => {
   const resp = await fetch(`${API_URL}/api/private/games`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -171,39 +175,39 @@ export const getMatchList = async(): Promise<GetMatchListOutput> => {
     matchList: games.map((game: any) => {
       return {
         ...game,
-        name: `${new Date(game.created_at).toLocaleString()}`, 
-      }
+        name: `${new Date(game.created_at).toLocaleString()}`,
+      };
     }),
   };
 };
 
 type GetRankingOutput = {
-  ranking: User[]
+  ranking: User[];
 };
-export const getRanking = async(): Promise<GetRankingOutput> => {
+export const getRanking = async (): Promise<GetRankingOutput> => {
   // TODO
-  console.log('[API] get ranking');
+  console.log("[API] get ranking");
   await wait(500);
   return {
     ranking: [
-      {id: 'user-1', username: 'User 1'},
-      {id: 'user-2', username: 'User 2'},
-      {id: 'user-3', username: 'User 3'},
+      { id: "user-1", username: "User 1" },
+      { id: "user-2", username: "User 2" },
+      { id: "user-3", username: "User 3" },
     ],
   };
 };
 
 type GetMatchInput = {
-  id: string
+  id: string;
 };
 type GetMatchOutput = {
-  match: Match
+  match: RawMatchInfo;
 };
-export const getMatch = async({
+export const getMatch = async ({
   id,
 }: GetMatchInput): Promise<GetMatchOutput> => {
   const resp = await fetch(`${API_URL}/api/games/${id}`, {
-    method: 'GET',
+    method: "GET",
   });
 
   const game = await resp.json();
@@ -211,17 +215,15 @@ export const getMatch = async({
   return {
     match: {
       id: game.id,
-      name: `${new Date(game.created_at).toLocaleString()}`, 
-      map: game.config
+      name: `${new Date(game.created_at).toLocaleString()}`,
+      map: game.config,
     },
   };
 };
 
-export const getMatchData = async({
-  id,
-}: GetMatchInput) => {
+export const getMatchData = async ({ id }: GetMatchInput) => {
   const resp = await fetch(`${API_URL}/api/games-data/${id}`, {
-    method: 'GET',
+    method: "GET",
   });
 
   return resp.json();
