@@ -54,11 +54,11 @@ func (api *Api) PublicGameByIdHandler(c *fiber.Ctx) error {
 func (api *Api) PublicCarouselleHandler(c *fiber.Ctx) error {
 	data := new(Game)
 
-	if err := api.db.NewSelect().Model(data).Column("id", "data").OrderExpr("RANDOM()").Limit(1).Scan(c.Context()); err != nil {
+	if err := api.db.NewSelect().Model(data).Column("id", "config", "outcome", "created_at", "updated_at").OrderExpr("RANDOM()").Limit(1).Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not get random game for carouselle: %v\n", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
 	c.Set("X-Game-Id", data.ID.String())
-	return c.Send(data.Data)
+	return c.JSON(data)
 }

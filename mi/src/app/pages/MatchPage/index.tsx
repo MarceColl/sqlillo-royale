@@ -12,9 +12,10 @@ import { useMatchStore } from "@/app/components/MatchPlayer/matchStore";
 
 type Props = {
   matchId: string;
+  carouselle?: boolean;
 };
 
-const MatchPage = ({ matchId }: Props) => {
+const MatchPage = ({ matchId, carouselle }: Props) => {
   const { data, isLoading } = useQuery(
     [Queries.match, matchId],
     () => {
@@ -40,7 +41,7 @@ const MatchPage = ({ matchId }: Props) => {
       map: data.match.map,
       traces: gameData,
     } as RawMatch);
-    setMatch(match);
+    setMatch(match, carouselle);
   }, [data?.match.map, gameData]);
 
   if (isLoading || !data || isDataLoading || !gameData) {

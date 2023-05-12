@@ -562,8 +562,22 @@ static int me_cast(lua_State *L) {
   return 0;
 }
 
+static int me_cod(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t*)lua_newuserdata(L, sizeof(cod_t));
+  luaL_getmetatable(L, "mimizu.cod");
+  lua_setmetatable(L, -2);
+
+  cod->x = me->gs->cod.x;
+  cod->y = me->gs->cod.y;
+  cod->radius = me->gs->cod.radius;
+
+  return 1;
+}
+
 static const struct luaL_Reg melib_m[] = {
     {"health", me_health},
+    {"me_cod", me_cod},
     {"move", me_move},
     {"id", me_id},
     {"username", me_username},
@@ -575,6 +589,44 @@ static const struct luaL_Reg melib_m[] = {
 };
 
 static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
+
+static int cod_x(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->x);
+  return 1;
+}
+
+static int cod_y(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->y);
+  return 1;
+}
+
+static int cod_radius(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->radius);
+  return 1;
+}
+
+static const struct luaL_Reg codlib_m[] = {
+  {"x", cod_x},
+  {"y", cod_y},
+  {"radius", cod_radius},
+};
+
+static const struct luaL_Reg codlib_f[] = {{NULL, NULL}};
+
+int luaopen_codlib(lua_State *L) {
+  luaL_newmetatable(L, "mimizu.cod");
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);
+  lua_settable(L, -3);
+
+  luaL_openlib(L, NULL, codlib_m, 0);
+  luaL_openlib(L, "cod", codlib_f, 0);
+  return 1;
+}
+
 
 int luaopen_melib(lua_State *L) {
   luaL_newmetatable(L, "mimizu.me");
@@ -611,6 +663,10 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
   call_bot_fn(L, p, gs, "bot_init");
 }
 
+void too_much_instr_hook(lua_State *L, lua_Debug *ar) {
+  luaL_error(L, "TOO MUCH");
+}
+
 void *player_thread(void *data) {
   player_thread_data_t *ptd = (player_thread_data_t *)data;
   lua_State *L = luaL_newstate();
@@ -618,6 +674,9 @@ void *player_thread(void *data) {
   luaopen_melib(L);
   luaopen_entitylib(L);
   luaopen_veclib(L);
+  luaopen_codlib(L);
+
+  lua_sethook(L, too_much_instr_hook, LUA_MASKCOUNT, 150000);
 
   int id = ptd->id;
   gamestate_t *gs = ptd->gs;
@@ -626,6 +685,7 @@ void *player_thread(void *data) {
 
   if (luaL_loadstring(L, code) || lua_pcall(L, 0, 0, 0)) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
+    ptd->dead = true;
     return NULL;
   }
 
@@ -645,7 +705,9 @@ void *player_thread(void *data) {
       break;
     }
 
+    printf("PLAYER #%d STARTING\n", id);
     call_bot_main(L, this_player, gs);
+    printf("PLAYER #%d ENDED\n", id);
 
     pthread_mutex_lock(&done_cond_mut);
     ptd->done = true;
@@ -1089,6 +1151,14 @@ ORDER BY\n\
     update_traces(&gs);
 
     curr_time += TICK_TIME;
+
+
+    alive_players = 0;
+    for (int i = 0; i < gs.n_players; i++) {
+	if (!ptd[i].dead) {
+	  alive_players += 1;
+	}
+    }
 
 #if MMZ_GRAPHICS_SUPPORT
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);

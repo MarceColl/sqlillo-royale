@@ -82,6 +82,23 @@ export const saveCode = async({
 // Queries
 ///////////////
 
+type GetUserInfo = {
+  username: string;
+  ranking?: number;
+};
+export const getUserInfo = async() => {
+  const resp = await fetch(`${API_URL}/api/private/user`, {
+    method: 'GET',
+    headers: {
+      // NOTE(taras)
+      // Maybe getting from local storage is not the best idea
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+
+  return (await resp.json()) as GetUserInfo;
+};
+
 type GetLastCodeOutput = {
   id: string; code: string;
 };
@@ -120,6 +137,19 @@ export const getAllCodes = async(): Promise<GetAllCodesOutput> => {
   return {
     codes: await resp.json()
   }
+};
+
+export const getCarouselle = async(): Promise<Match> => {
+  const resp = await fetch(`${API_URL}/api/carouselle`, {
+    method: 'GET',
+    headers: {
+      // NOTE(taras)
+      // Maybe getting from local storage is not the best idea
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+
+  return (await resp.json()) as Match;
 };
 
 type GetMatchListOutput = {

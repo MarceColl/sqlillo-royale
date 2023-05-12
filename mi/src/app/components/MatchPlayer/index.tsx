@@ -2,6 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { MatchScene } from "./MatchScene";
 import { Controls } from "./Controls";
 import { PlayerList } from "./PlayerList";
+import { useMatchStore } from "@/app/components/MatchPlayer/matchStore";
 import styled from "styled-components";
 
 const UI = styled.div`
@@ -18,12 +19,16 @@ type Props = {
 };
 
 export const MatchPlayer = ({ className }: Props) => {
+  const { carouselle } = useMatchStore.getState();
+
   return (
     <UI className={className}>
       <Canvas>
         <MatchScene />
       </Canvas>
-      <Controls />
+      {!carouselle && (
+        <Controls />
+      )}
       <PlayerList />
     </UI>
   );
