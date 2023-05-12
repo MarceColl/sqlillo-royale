@@ -562,8 +562,22 @@ static int me_cast(lua_State *L) {
   return 0;
 }
 
+static int me_cod(lua_State *L) {
+  me_t *me = (me_t*)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t*)lua_newuserdata(L, sizeof(cod_t));
+  luaL_getmetatable(L, "mimizu.cod");
+  lua_setmetatable(L, -2);
+
+  cod->x = me->gs->cod.x;
+  cod->y = me->gs->cod.y;
+  cod->radius = me->gs->cod.radius;
+
+  return 1;
+}
+
 static const struct luaL_Reg melib_m[] = {
     {"health", me_health},
+    {"me_cod", me_cod},
     {"move", me_move},
     {"id", me_id},
     {"username", me_username},
@@ -575,6 +589,44 @@ static const struct luaL_Reg melib_m[] = {
 };
 
 static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
+
+static int cod_x(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->x);
+  return 1;
+}
+
+static int cod_y(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->y);
+  return 1;
+}
+
+static int cod_radius(lua_State *L) {
+  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  lua_pushnumber(L, cod->radius);
+  return 1;
+}
+
+static const struct luaL_Reg codlib_m[] = {
+  {"x", cod_x},
+  {"y", cod_y},
+  {"radius", cod_radius},
+};
+
+static const struct luaL_Reg codlib_f[] = {{NULL, NULL}};
+
+int luaopen_codlib(lua_State *L) {
+  luaL_newmetatable(L, "mimizu.cod");
+  lua_pushstring(L, "__index");
+  lua_pushvalue(L, -2);
+  lua_settable(L, -3);
+
+  luaL_openlib(L, NULL, codlib_m, 0);
+  luaL_openlib(L, "cod", codlib_f, 0);
+  return 1;
+}
+
 
 int luaopen_melib(lua_State *L) {
   luaL_newmetatable(L, "mimizu.me");
@@ -618,6 +670,7 @@ void *player_thread(void *data) {
   luaopen_melib(L);
   luaopen_entitylib(L);
   luaopen_veclib(L);
+  luaopen_codlib(L);
 
   int id = ptd->id;
   gamestate_t *gs = ptd->gs;
