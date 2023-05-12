@@ -1152,6 +1152,14 @@ ORDER BY\n\
 
     curr_time += TICK_TIME;
 
+
+    alive_players = 0;
+    for (int i = 0; i < gs.n_players; i++) {
+	if (!ptd[i].dead) {
+	  alive_players += 1;
+	}
+    }
+
 #if MMZ_GRAPHICS_SUPPORT
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
