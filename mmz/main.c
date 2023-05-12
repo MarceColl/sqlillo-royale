@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <lauxlib.h>
 #include <libpq-fe.h>
 #include <lua.h>
@@ -708,9 +709,7 @@ void *player_thread(void *data) {
       break;
     }
 
-    printf("PLAYER #%d STARTING\n", id);
     call_bot_main(L, this_player, gs);
-    printf("PLAYER #%d ENDED\n", id);
 
     pthread_mutex_lock(&done_cond_mut);
     ptd->done = true;
@@ -896,7 +895,7 @@ void pg_command_error_handler(PGresult *res) {
   }
 }
 
-void run_match() {
+void run_match(int num_files, char **files) {
   srand(time(NULL));
 
   pthread_mutex_init(&inc_tick_cond_mut, NULL);
@@ -905,38 +904,46 @@ void run_match() {
   pthread_cond_init(&done_cond_var, NULL);
   printf("Initialized base condition vars\n");
 
-  PGresult *res = PQexec(conn,
-                         "SELECT\n\
-  DISTINCT ON (u.username)\n\
-  u.username, c.id, c.code\n\
-FROM\n\
-  users AS u\n\
-JOIN\n\
-  codes AS c ON u.username = c.username\n\
-WHERE\n\
-  u.deleted_at IS NULL\n\
-  AND c.code IS NOT NULL\n\
-  AND c.code != ''\n\
-ORDER BY\n\
-  u.username,\n\
-  c.created_at DESC;");
+  int rows, n_players;
+  PGresult *res;
+  if (!files) {
+    res = PQexec(conn,
+			    "SELECT\n\
+    DISTINCT ON (u.username)\n\
+    u.username, c.id, c.code\n\
+    FROM\n\
+    users AS u\n\
+    JOIN\n\
+    codes AS c ON u.username = c.username\n\
+    WHERE\n\
+    u.deleted_at IS NULL\n\
+    AND c.code IS NOT NULL\n\
+    AND c.code != ''\n\
+    ORDER BY\n\
+    u.username,\n\
+    c.created_at DESC;");
 
-  pg_result_error_handler(res);
+    pg_result_error_handler(res);
 
-  int rows = PQntuples(res);
+    rows = PQntuples(res);
 
-  if (rows == 0) {
-    printf("No codes in DB\n");
-    return;
+    if (rows == 0) {
+	printf("No codes in DB\n");
+	return;
+    }
+
+    n_players = rows;
+
+    printf("Got %d codes from DB\n", rows);
+  } else {
+    n_players = num_files;
   }
 
-  printf("Got %d codes from DB\n", rows);
-
   gamestate_t gs = {
-      .n_players = rows,
-      .active_entities = rows,
+      .n_players = n_players,
+      .active_entities = n_players,
       .players = (player_t *)malloc(sizeof(player_t) * MAX_ENTITIES),
-      .threads = (pthread_t *)malloc(sizeof(pthread_t) * rows),
+      .threads = (pthread_t *)malloc(sizeof(pthread_t) * n_players),
       .w = 500,
       .h = 500,
       .cod = { .x = -1, .y = -1, .radius = -1 },
@@ -981,8 +988,13 @@ ORDER BY\n\
 				 // Not stunned
                                  .stunned = 0};
 
-      gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
-                                           .code = PQgetvalue(res, i, 2)};
+      if (files) {
+	gs.players[i].code = (player_code_t){.uuid = "hola", .code = files[i]};
+      } else {
+	gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
+					    .code = PQgetvalue(res, i, 2)};
+      }
+
       gs.meta[i].type = PLAYER;
       ptd[i] = (player_thread_data_t){
           .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
@@ -1155,7 +1167,6 @@ ORDER BY\n\
 
     curr_time += TICK_TIME;
 
-
     alive_players = 0;
     for (int i = 0; i < gs.n_players; i++) {
 	if (!ptd[i].dead) {
@@ -1215,57 +1226,59 @@ ORDER BY\n\
 
   const char *param_game[3] = {traces_str, config_str, "[]"};
 
-  PGresult *res_ins =
-      PQexecParams(conn,
-                   "INSERT INTO games (id, data, config, outcome) VALUES "
-                   "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
-                   3, NULL, param_game, NULL, NULL, 0);
+  if (!files) {
+    PGresult *res_ins =
+	PQexecParams(conn,
+		    "INSERT INTO games (id, data, config, outcome) VALUES "
+		    "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
+		    3, NULL, param_game, NULL, NULL, 0);
 
-  pg_result_error_handler(res_ins);
-  int i_rows = PQntuples(res_ins);
+    pg_result_error_handler(res_ins);
+    int i_rows = PQntuples(res_ins);
 
-  if (i_rows == 0) {
-    printf("[ERROR] No game was generated...\n");
-    pg_error_exit(conn, 1);
-  } else if (i_rows > 1) {
-    printf("[ERROR] More than one game generated (%d), WTF?\n", i_rows);
-    pg_error_exit(conn, 1);
+    if (i_rows == 0) {
+	printf("[ERROR] No game was generated...\n");
+	pg_error_exit(conn, 1);
+    } else if (i_rows > 1) {
+	printf("[ERROR] More than one game generated (%d), WTF?\n", i_rows);
+	pg_error_exit(conn, 1);
+    }
+
+    const char *game_uuid = PQgetvalue(res_ins, 0, 0);
+    printf("Game id is %s\n", game_uuid);
+
+    for (int i = 0; i < gs.n_players; i++) {
+	pthread_cancel(gs.threads[i]);
+
+	char rank_str[50];
+	snprintf(rank_str, 50, "%d", gs.players[i].rank);
+	const char *params_connection[4] = {gs.players[i].username, game_uuid,
+					    gs.players[i].code.uuid, rank_str};
+
+	PGresult *res_ins_2 =
+	    PQexecParams(conn,
+			"INSERT INTO games_to_users (username, "
+			"game_id, code_id, rank) VALUES ($1, $2, $3, $4)",
+			4, NULL, params_connection, NULL, NULL, 0);
+
+	pg_command_error_handler(res_ins_2);
+	PQclear(res_ins_2);
+
+	printf("Player #%d with %s connection created!\n", i,
+	    gs.players[i].username);
+    }
+
+    PQclear(res_ins);
+    // NOTE(taras)
+    // Close this now as we are using the `username` from it,
+    // probably this could be done in a better way, but fuck it
+    PQclear(res);
   }
 
-  const char *game_uuid = PQgetvalue(res_ins, 0, 0);
-  printf("Game id is %s\n", game_uuid);
-
-  for (int i = 0; i < gs.n_players; i++) {
-    pthread_cancel(gs.threads[i]);
-
-    char rank_str[50];
-    snprintf(rank_str, 50, "%d", gs.players[i].rank);
-    const char *params_connection[4] = {gs.players[i].username, game_uuid,
-                                        gs.players[i].code.uuid, rank_str};
-
-    PGresult *res_ins_2 =
-        PQexecParams(conn,
-                     "INSERT INTO games_to_users (username, "
-                     "game_id, code_id, rank) VALUES ($1, $2, $3, $4)",
-                     4, NULL, params_connection, NULL, NULL, 0);
-
-    pg_command_error_handler(res_ins_2);
-    PQclear(res_ins_2);
-
-    printf("Player #%d with %s connection created!\n", i,
-           gs.players[i].username);
-  }
-
-  PQclear(res_ins);
   yyjson_doc_free(doc);
-
-  // NOTE(taras)
-  // Close this now as we are using the `username` from it,
-  // probably this could be done in a better way, but fuck it
-  PQclear(res);
 }
 
-int main() {
+int main(int argc, char **argv) {
   printf("            _           _           \n");
   printf("  _ __ ___ (_)_ __ ___ (_)_____   _ \n");
   printf(" | '_ ` _ \\| | '_ ` _ \\| |_  / | | |\n");
@@ -1273,19 +1286,34 @@ int main() {
   printf(" |_| |_| |_|_|_| |_| |_|_/___|\\__,_|\n");
   printf("                                    \n");
 
-  conn = PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
+  char** files = NULL;
+  if (argc > 1) {
+    files = (char**)malloc(sizeof(char**)*(argc-1));
+    for (int i = 1; i < argc; i++) {
+      FILE *fd = fopen(argv[i], "r");
+      fseek(fd, 0, SEEK_END);
+      size_t size = ftell(fd);
+      fseek(fd, 0, SEEK_SET);
+      char *buffer = (char*)malloc(size+1);
+      buffer[size] = '\0';
+      fread(buffer, size, 1, fd);
+      files[i-1] = buffer;
+    }
+  } else {
+    conn = PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
 
-  if (PQstatus(conn) == CONNECTION_BAD) {
-    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+    if (PQstatus(conn) == CONNECTION_BAD) {
+	printf("Connection to database failed: %s\n", PQerrorMessage(conn));
 
-    PQfinish(conn);
-    exit(1);
+	PQfinish(conn);
+	exit(1);
+    }
   }
 
   printf("Start match...\n");
 
   /* while (true) { */
-  run_match();
+  run_match(argc - 1, files);
   /* } */
 
   printf("Exiting...\n");
