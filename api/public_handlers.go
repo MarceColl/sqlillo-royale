@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 )
 
 func (api *Api) PublicGamesHandler(c *fiber.Ctx) error {
@@ -61,4 +64,48 @@ func (api *Api) PublicCarouselleHandler(c *fiber.Ctx) error {
 
 	c.Set("X-Game-Id", data.ID.String())
 	return c.JSON(data)
+}
+
+func (api *Api) PublicGameByIdWsHandler(c *websocket.Conn) {
+	defer func() {
+		c.Close()
+	}()
+
+	ctx := context.Background()
+
+	id := c.Params("id", "")
+
+	if id == "" {
+		return
+	}
+
+	var dataBytes []byte
+
+	if err := api.db.NewSelect().Model(&dataBytes).Column("data").Table("games").Where("id = ?", id).Scan(ctx); err != nil {
+		log.Printf("[ERROR] Could not get game data for %s: %v\n", id, err)
+		return
+	}
+
+	var data []map[string]interface{}
+
+	if err := json.Unmarshal(dataBytes, &data); err != nil {
+		log.Printf("[ERROR] Could not unmarshal bytes of game data for %s: %v\n", id, err)
+		return
+	}
+
+	for i, trace := range data {
+		if bb, err := json.Marshal(trace); err != nil {
+			log.Printf("[ERROR] Could not unmarshal bytes for the trace %d for game %s: %v\n", i, id, err)
+		} else {
+			if err := c.WriteMessage(
+				websocket.BinaryMessage,
+				bb,
+			); err != nil {
+				log.Printf("[ERROR] Could to send messgae for trace %d and game %s: %v\n", i, id, err)
+			}
+		}
+
+	}
+
+	return
 }

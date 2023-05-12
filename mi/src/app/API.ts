@@ -86,7 +86,7 @@ type GetUserInfo = {
   username: string;
   ranking?: number;
 };
-export const getUserInfo = async() => {
+export const getUserInfo = async () => {
   const resp = await fetch(`${API_URL}/api/private/user`, {
     method: 'GET',
     headers: {
@@ -170,8 +170,7 @@ export const getMatchList = async(): Promise<GetMatchListOutput> => {
   return {
     matchList: games.map((game: any) => {
       return {
-        ...game,
-        name: `${new Date(game.created_at).toLocaleString()}`, 
+        ...game, name: `${new Date(game.created_at).toLocaleString()}`,
       }
     }),
   };
@@ -211,13 +210,13 @@ export const getMatch = async({
   return {
     match: {
       id: game.id,
-      name: `${new Date(game.created_at).toLocaleString()}`, 
+      name: `${new Date(game.created_at).toLocaleString()}`,
       map: game.config
     },
   };
 };
 
-export const getMatchData = async({
+export const getMatchData = async ({
   id,
 }: GetMatchInput) => {
   const resp = await fetch(`${API_URL}/api/games-data/${id}`, {
