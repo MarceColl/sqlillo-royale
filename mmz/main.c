@@ -704,7 +704,9 @@ void *player_thread(void *data) {
       break;
     }
 
+    printf("PLAYER #%d STARTING\n");
     call_bot_main(L, this_player, gs);
+    printf("PLAYER #%d ENDED\n");
 
     pthread_mutex_lock(&done_cond_mut);
     ptd->done = true;
