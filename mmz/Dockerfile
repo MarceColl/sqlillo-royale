@@ -7,5 +7,5 @@ RUN sh build.sh
 FROM alpine:latest
 
 RUN apk add --no-cache lua5.1 luajit libpq
-COPY --from=builder ./mmz ./mmz
-ENTRYPOINT ["./mmz"]
+COPY --from=builder ./mmz-bin ./mmz-bin
+ENTRYPOINT ["./mmz-bin"]

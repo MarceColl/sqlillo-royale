@@ -50,6 +50,7 @@ func main() {
 	private.Get("/games", api.WithUser(api.PrivateGamesHandler))
 
 	apiRoutes.Get("/games/:id/ws", websocket.New(api.PublicGameByIdWsHandler))
+	go api.SetupRankingCron()
 
 	port := os.Getenv("PORT")
 

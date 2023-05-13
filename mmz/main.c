@@ -65,13 +65,13 @@ typedef struct {
 } ranking_entry_t;
 
 cod_timing_t cod_timings[] = {
-  { .tick = 0, .radius = 500, .speed = 20 },
-  { .tick = 800, .radius = 150, .speed = 5 },
-  { .tick = 1200, .radius = 90, .speed = 3 },
-  { .tick = 1500, .radius = 40, .speed = 3 },
-  { .tick = 1700, .radius = 10, .speed = 2 },
-  { .tick = 1900, .radius = 0, .speed = 1 },
-  { .tick = -1, .radius = -1, .speed = -1 },
+    {.tick = 0, .radius = 500, .speed = 20},
+    {.tick = 800, .radius = 150, .speed = 5},
+    {.tick = 1200, .radius = 90, .speed = 3},
+    {.tick = 1500, .radius = 40, .speed = 3},
+    {.tick = 1700, .radius = 10, .speed = 2},
+    {.tick = 1900, .radius = 0, .speed = 1},
+    {.tick = -1, .radius = -1, .speed = -1},
 };
 
 typedef struct {
@@ -119,7 +119,7 @@ typedef struct {
   int64_t health;
   int8_t used_skill;
   vecf_t skill_dir;
-  int targeted_player; // If -1 no target, else player entity id
+  int targeted_player;  // If -1 no target, else player entity id
   player_movement_t movement;
   bool stunned;
   bool dead;
@@ -229,18 +229,42 @@ typedef struct {
 
 typedef struct {
   enum entity_type type;
+  int owner_id;
   int id;
   gamestate_t *gs;
 } lua_entity_t;
 
 static int entity_id(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushinteger(L, ent->id);
+  return 1;
+}
+
+static int entity_owner_id(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  lua_pushinteger(L, ent->owner_id);
   return 1;
 }
 
 static int entity_pos(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
 
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
@@ -255,16 +279,21 @@ static int entity_pos(lua_State *L) {
 static int entity_type(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   switch (ent->gs->meta[ent->id].type) {
-  case PLAYER:
-    lua_pushstring(L, "player");
-    break;
-  case SMALL_PROJ:
-    lua_pushstring(L, "small_proj");
-    break;
-  default:
-    lua_pushstring(L, "unknown");
-    break;
+    case PLAYER:
+      lua_pushstring(L, "player");
+      break;
+    case SMALL_PROJ:
+      lua_pushstring(L, "small_proj");
+      break;
+    default:
+      lua_pushstring(L, "unknown");
+      break;
   }
 
   return 1;
@@ -273,13 +302,18 @@ static int entity_type(lua_State *L) {
 static int entity_alive(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   int alive = 0;
   switch (ent->gs->meta[ent->id].type) {
-  case PLAYER:
-    alive = !ent->gs->players[ent->id].dead;
-    break;
-  default:
-    break;
+    case PLAYER:
+      alive = !ent->gs->players[ent->id].dead;
+      break;
+    default:
+      break;
   }
 
   lua_pushboolean(L, alive);
@@ -289,13 +323,21 @@ static int entity_alive(lua_State *L) {
 
 int lua_entity_to_string(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
-  lua_pushfstring(L, "<Entity id=%d type=%d>", ent->id, ent->type);
+
+  if (ent == NULL) {
+    lua_pushfstring(L, "Entity is nil!");
+    return 1;
+  }
+
+  lua_pushfstring(L, "<Entity id=%d type=%d owner=%d>", ent->id, ent->type,
+                  ent->owner_id);
   return 1;
 }
 
 static const struct luaL_Reg entitylib_m[] = {
     {"__tostring", lua_entity_to_string},
     {"id", entity_id},
+    {"owner_id", entity_owner_id},
     {"pos", entity_pos},
     {"type", entity_type},
     {"alive", entity_alive},
@@ -335,6 +377,13 @@ static int vec_add(lua_State *L) {
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
 
+  if (vec1 == NULL || vec2 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
+
   vec->x = vec1->x + vec2->x;
   vec->y = vec1->y + vec2->y;
 
@@ -349,6 +398,13 @@ static int vec_sub(lua_State *L) {
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
 
+  if (vec1 == NULL || vec2 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
+
   vec->x = vec1->x - vec2->x;
   vec->y = vec1->y - vec2->y;
 
@@ -358,18 +414,37 @@ static int vec_sub(lua_State *L) {
 static int vec_distance(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
   vecf_t *vec2 = (vecf_t *)lua_touserdata(L, 2);
+
+  if (vec1 == NULL || vec2 == NULL) {
+    lua_pushnumber(L, -1);
+    return 1;
+  }
+
   lua_pushnumber(L, dist(vec1, vec2));
+
   return 1;
 }
 
 static int vec_x(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
+
+  if (vec1 == NULL) {
+    lua_pushnumber(L, 0);
+    return 1;
+  }
+
   lua_pushnumber(L, vec1->x);
   return 1;
 }
 
 static int vec_y(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
+
+  if (vec1 == NULL) {
+    lua_pushnumber(L, 0);
+    return 1;
+  }
+
   lua_pushnumber(L, vec1->y);
   return 1;
 }
@@ -381,6 +456,13 @@ static int vec_rot(lua_State *L) {
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
+
+  if (vec1 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
 
   vec->x = cos(angle) * vec1->x + sin(angle) * vec1->y;
   vec->y = sin(angle) * vec1->x + cos(angle) * vec1->y;
@@ -395,6 +477,13 @@ static int vec_neg(lua_State *L) {
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
 
+  if (vec1 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
+
   vec->x = -1 * vec1->x;
   vec->y = -1 * vec1->y;
 
@@ -408,17 +497,17 @@ int vec_to_string(lua_State *L) {
 }
 
 #if MMZ_GRAPHICS_SUPPORT
-void DrawCircle(SDL_Renderer* renderer, int32_t centreX, int32_t centreY, int32_t radius) {
-    const int32_t diameter = (radius * 2);
+void DrawCircle(SDL_Renderer *renderer, int32_t centreX, int32_t centreY,
+                int32_t radius) {
+  const int32_t diameter = (radius * 2);
 
-    int32_t x = (radius - 1);
-    int32_t y = 0;
-    int32_t tx = 1;
-    int32_t ty = 1;
-    int32_t error = (tx - diameter);
+  int32_t x = (radius - 1);
+  int32_t y = 0;
+  int32_t tx = 1;
+  int32_t ty = 1;
+  int32_t error = (tx - diameter);
 
-    while (x >= y)
-    {
+  while (x >= y) {
     // Each of the following renders an octant of the circle
     SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
     SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
@@ -429,21 +518,18 @@ void DrawCircle(SDL_Renderer* renderer, int32_t centreX, int32_t centreY, int32_
     SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
     SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
 
-      if (error <= 0)
-      {
-      	++y;
-      	error += ty;
-      	ty += 2;
-      }
-
-      if (error > 0)
-      {
-      	--x;
-      	tx += 2;
-      	error += (tx - diameter);
-      }
-
+    if (error <= 0) {
+      ++y;
+      error += ty;
+      ty += 2;
     }
+
+    if (error > 0) {
+      --x;
+      tx += 2;
+      error += (tx - diameter);
+    }
+  }
 }
 #endif
 
@@ -503,11 +589,17 @@ static int me_pos(lua_State *L) {
 
 static int me_move(lua_State *L) {
   me_t *me = (me_t *)lua_touserdata(L, 1);
-  if (me == NULL) { return 0; }
-  if (me->p == NULL) { return 0; }
+  if (me == NULL) {
+    return 0;
+  }
+  if (me->p == NULL) {
+    return 0;
+  }
   int eid = me->p->id;
   vecf_t *dir = (vecf_t *)lua_touserdata(L, 2);
-  if (dir == NULL) { return 0; }
+  if (dir == NULL) {
+    return 0;
+  }
   me->gs->dir[eid].x = dir->x;
   me->gs->dir[eid].y = dir->y;
   return 0;
@@ -521,7 +613,7 @@ static int me_visible(lua_State *L) {
   int idx = 1;
   for (int i = 0; i < gs->active_entities; i++) {
     vecf_t *other = &gs->pos[i];
-    if ((me->p->id != i) && dist(&gs->pos[me->p->id], other) < 50) {
+    if (me->p->id != i) {
       if (gs->meta[i].type == PLAYER && gs->players[i].dead) continue;
       lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
       luaL_getmetatable(L, "mimizu.entity");
@@ -529,6 +621,7 @@ static int me_visible(lua_State *L) {
 
       ent->id = i;
       ent->type = gs->meta[i].type;
+      ent->owner_id = gs->meta[i].owner;
       ent->gs = gs;
 
       lua_rawseti(L, -2, idx++);
@@ -540,7 +633,7 @@ static int me_visible(lua_State *L) {
 
 static int me_target(lua_State *L) {
   me_t *me = (me_t *)lua_touserdata(L, 1);
-  lua_entity_t *ent = (lua_entity_t*)lua_touserdata(L, 2);
+  lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 2);
 
   if (ent->type == PLAYER) {
     printf("Player %d targeted player %d\n", me->p->id, ent->id);
@@ -567,8 +660,8 @@ static int me_cast(lua_State *L) {
 }
 
 static int me_cod(lua_State *L) {
-  me_t *me = (me_t*)lua_touserdata(L, 1);
-  cod_t *cod = (cod_t*)lua_newuserdata(L, sizeof(cod_t));
+  me_t *me = (me_t *)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t *)lua_newuserdata(L, sizeof(cod_t));
   luaL_getmetatable(L, "mimizu.cod");
   lua_setmetatable(L, -2);
 
@@ -580,42 +673,35 @@ static int me_cod(lua_State *L) {
 }
 
 static const struct luaL_Reg melib_m[] = {
-    {"health", me_health},
-    {"me_cod", me_cod},
-    {"move", me_move},
-    {"id", me_id},
-    {"username", me_username},
-    {"visible", me_visible},
-    {"cast", me_cast},
-    {"pos", me_pos},
-    {"target", me_target},
-    {NULL, NULL}
-};
+    {"health", me_health}, {"cod", me_cod},           {"move", me_move},
+    {"id", me_id},         {"username", me_username}, {"visible", me_visible},
+    {"cast", me_cast},     {"pos", me_pos},           {"target", me_target},
+    {NULL, NULL}};
 
 static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
 
 static int cod_x(lua_State *L) {
-  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t *)lua_touserdata(L, 1);
   lua_pushnumber(L, cod->x);
   return 1;
 }
 
 static int cod_y(lua_State *L) {
-  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t *)lua_touserdata(L, 1);
   lua_pushnumber(L, cod->y);
   return 1;
 }
 
 static int cod_radius(lua_State *L) {
-  cod_t *cod = (cod_t*)lua_touserdata(L, 1);
+  cod_t *cod = (cod_t *)lua_touserdata(L, 1);
   lua_pushnumber(L, cod->radius);
   return 1;
 }
 
 static const struct luaL_Reg codlib_m[] = {
-  {"x", cod_x},
-  {"y", cod_y},
-  {"radius", cod_radius},
+    {"x", cod_x},
+    {"y", cod_y},
+    {"radius", cod_radius},
 };
 
 static const struct luaL_Reg codlib_f[] = {{NULL, NULL}};
@@ -630,7 +716,6 @@ int luaopen_codlib(lua_State *L) {
   luaL_openlib(L, "cod", codlib_f, 0);
   return 1;
 }
-
 
 int luaopen_melib(lua_State *L) {
   luaL_newmetatable(L, "mimizu.me");
@@ -836,7 +921,8 @@ void update_traces(gamestate_t *gs) {
 void save_traces(gamestate_t *gs) {
   yyjson_write_err json_err;
 
-  if (!yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, &json_err)) {
+  if (!yyjson_mut_write_file("files/traces.json", gs->traces, 0, NULL,
+                             &json_err)) {
     printf("[ERROR] Could not save data to JSON: (%u) %s\n", json_err.code,
            json_err.msg);
   }
@@ -846,6 +932,7 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
                   vecf_t *dir, int owner) {
   gs->active_entities += 1;
   int eid = gs->active_entities;
+
   gs->pos[eid].x = pos->x;
   gs->pos[eid].y = pos->y;
   gs->dir[eid].x = dir->x;
@@ -908,7 +995,7 @@ void run_match(int num_files, char **files) {
   PGresult *res;
   if (!files) {
     res = PQexec(conn,
-			    "SELECT\n\
+                 "SELECT\n\
     DISTINCT ON (u.username)\n\
     u.username, c.id, c.code\n\
     FROM\n\
@@ -928,8 +1015,8 @@ void run_match(int num_files, char **files) {
     rows = PQntuples(res);
 
     if (rows == 0) {
-	printf("No codes in DB\n");
-	return;
+      printf("No codes in DB\n");
+      return;
     }
 
     n_players = rows;
@@ -946,7 +1033,7 @@ void run_match(int num_files, char **files) {
       .threads = (pthread_t *)malloc(sizeof(pthread_t) * n_players),
       .w = 500,
       .h = 500,
-      .cod = { .x = -1, .y = -1, .radius = -1 },
+      .cod = {.x = -1, .y = -1, .radius = -1},
       .dc_active = false,
   };
 
@@ -978,21 +1065,21 @@ void run_match(int num_files, char **files) {
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
                                  .health = 100,
-				 // No skill used
+                                 // No skill used
                                  .used_skill = -1,
-				 // No default movement
-				 .movement = { .type = MT_NONE },
-				 // No target
-				 .targeted_player = -1,
-				 .dead = 0,
-				 // Not stunned
+                                 // No default movement
+                                 .movement = {.type = MT_NONE},
+                                 // No target
+                                 .targeted_player = -1,
+                                 .dead = 0,
+                                 // Not stunned
                                  .stunned = 0};
 
       if (files) {
-	gs.players[i].code = (player_code_t){.uuid = "hola", .code = files[i]};
+        gs.players[i].code = (player_code_t){.uuid = "hola", .code = files[i]};
       } else {
-	gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
-					    .code = PQgetvalue(res, i, 2)};
+        gs.players[i].code = (player_code_t){.uuid = PQgetvalue(res, i, 1),
+                                             .code = PQgetvalue(res, i, 2)};
       }
 
       gs.meta[i].type = PLAYER;
@@ -1011,7 +1098,7 @@ void run_match(int num_files, char **files) {
   float curr_time = 0;
   printf("Starting match...\n");
 
-  vecf_t cod_center = { .x = 250, .y = 250 };
+  vecf_t cod_center = {.x = 250, .y = 250};
   int current_cod = 0;
   int current_radius = cod_timings[current_cod].radius;
   int target_radius = cod_timings[current_cod].radius;
@@ -1025,24 +1112,25 @@ void run_match(int num_files, char **files) {
     tick += 1;
 
     cod_timing_t *timing = &cod_timings[current_cod];
-    cod_timing_t *next_timing = &cod_timings[current_cod+1];
+    cod_timing_t *next_timing = &cod_timings[current_cod + 1];
     if (tick > next_timing->tick) {
       if (next_timing->tick != -1) {
-	current_cod += 1;
-	timing = &cod_timings[current_cod];
-	next_timing = &cod_timings[current_cod+1];
+        current_cod += 1;
+        timing = &cod_timings[current_cod];
+        next_timing = &cod_timings[current_cod + 1];
       }
       gs.cod.x = cod_center.x;
       gs.cod.y = cod_center.y;
       target_radius = timing->radius;
-      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y, timing->radius);
+      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y,
+             timing->radius);
     }
 
     if (current_radius > target_radius) {
       current_radius -= timing->speed;
 
       if (current_radius < target_radius) {
-	current_radius = target_radius;
+        current_radius = target_radius;
       }
     }
 
@@ -1082,18 +1170,21 @@ void run_match(int num_files, char **files) {
     for (int i = 0; i < gs.active_entities; i++) {
       normalize(&gs.dir[i]);
       if (gs.meta[i].type == PLAYER) {
-	if (ptd[i].dead) { continue; }
+        if (ptd[i].dead) {
+          continue;
+        }
         gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED;
         gs.pos[i].y += gs.dir[i].y * TICK_TIME * BASE_PLAYER_SPEED;
         normalize(&gs.players[i].skill_dir);
 
-	if (dist(&cod_center, &gs.pos[i]) >= current_radius) {
-	  gs.players[i].health -= 1;
-	}
+        if (dist(&cod_center, &gs.pos[i]) >= current_radius) {
+          gs.players[i].health -= 1;
+        }
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
+                          i);
             gs.players[i].cd[0] = 30;
             break;
           case 1:  // DASH
@@ -1143,14 +1234,14 @@ void run_match(int num_files, char **files) {
 
         if (gs.players[i].health <= 0 && !ptd[i].dead) {
           // delete_entity(&gs, i);
-	  if (current_ranking_tick != tick) {
-	    current_ranking_tick = tick;
-	    current_ranking += 1;
-	  }
-	  gs.players[i].rank = current_ranking;
-	  alive_players -= 1;
+          if (current_ranking_tick != tick) {
+            current_ranking_tick = tick;
+            current_ranking += 1;
+          }
+          gs.players[i].rank = current_ranking;
+          alive_players -= 1;
           ptd[i].dead = true;
-	  gs.players[i].dead = true;
+          gs.players[i].dead = true;
         }
       } else if (gs.meta[i].type == SMALL_PROJ) {
         gs.pos[i].x += gs.dir[i].x * TICK_TIME * BASE_PLAYER_SPEED * 4;
@@ -1169,9 +1260,9 @@ void run_match(int num_files, char **files) {
 
     alive_players = 0;
     for (int i = 0; i < gs.n_players; i++) {
-	if (!ptd[i].dead) {
-	  alive_players += 1;
-	}
+      if (!ptd[i].dead) {
+        alive_players += 1;
+      }
     }
 
 #if MMZ_GRAPHICS_SUPPORT
@@ -1228,44 +1319,44 @@ void run_match(int num_files, char **files) {
 
   if (!files) {
     PGresult *res_ins =
-	PQexecParams(conn,
-		    "INSERT INTO games (id, data, config, outcome) VALUES "
-		    "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
-		    3, NULL, param_game, NULL, NULL, 0);
+        PQexecParams(conn,
+                     "INSERT INTO games (id, data, config, outcome) VALUES "
+                     "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
+                     3, NULL, param_game, NULL, NULL, 0);
 
     pg_result_error_handler(res_ins);
     int i_rows = PQntuples(res_ins);
 
     if (i_rows == 0) {
-	printf("[ERROR] No game was generated...\n");
-	pg_error_exit(conn, 1);
+      printf("[ERROR] No game was generated...\n");
+      pg_error_exit(conn, 1);
     } else if (i_rows > 1) {
-	printf("[ERROR] More than one game generated (%d), WTF?\n", i_rows);
-	pg_error_exit(conn, 1);
+      printf("[ERROR] More than one game generated (%d), WTF?\n", i_rows);
+      pg_error_exit(conn, 1);
     }
 
     const char *game_uuid = PQgetvalue(res_ins, 0, 0);
     printf("Game id is %s\n", game_uuid);
 
     for (int i = 0; i < gs.n_players; i++) {
-	pthread_cancel(gs.threads[i]);
+      pthread_cancel(gs.threads[i]);
 
-	char rank_str[50];
-	snprintf(rank_str, 50, "%d", gs.players[i].rank);
-	const char *params_connection[4] = {gs.players[i].username, game_uuid,
-					    gs.players[i].code.uuid, rank_str};
+      char rank_str[50];
+      snprintf(rank_str, 50, "%d", gs.players[i].rank);
+      const char *params_connection[4] = {gs.players[i].username, game_uuid,
+                                          gs.players[i].code.uuid, rank_str};
 
-	PGresult *res_ins_2 =
-	    PQexecParams(conn,
-			"INSERT INTO games_to_users (username, "
-			"game_id, code_id, rank) VALUES ($1, $2, $3, $4)",
-			4, NULL, params_connection, NULL, NULL, 0);
+      PGresult *res_ins_2 =
+          PQexecParams(conn,
+                       "INSERT INTO games_to_users (username, "
+                       "game_id, code_id, rank) VALUES ($1, $2, $3, $4)",
+                       4, NULL, params_connection, NULL, NULL, 0);
 
-	pg_command_error_handler(res_ins_2);
-	PQclear(res_ins_2);
+      pg_command_error_handler(res_ins_2);
+      PQclear(res_ins_2);
 
-	printf("Player #%d with %s connection created!\n", i,
-	    gs.players[i].username);
+      printf("Player #%d with %s connection created!\n", i,
+             gs.players[i].username);
     }
 
     PQclear(res_ins);
@@ -1286,27 +1377,30 @@ int main(int argc, char **argv) {
   printf(" |_| |_| |_|_|_| |_| |_|_/___|\\__,_|\n");
   printf("                                    \n");
 
-  char** files = NULL;
+  char **files = NULL;
   if (argc > 1) {
-    files = (char**)malloc(sizeof(char**)*(argc-1));
+    files = (char **)malloc(sizeof(char **) * (argc - 1));
     for (int i = 1; i < argc; i++) {
+      printf("Using file %s\n", argv[i]);
+
       FILE *fd = fopen(argv[i], "r");
       fseek(fd, 0, SEEK_END);
       size_t size = ftell(fd);
       fseek(fd, 0, SEEK_SET);
-      char *buffer = (char*)malloc(size+1);
+      char *buffer = (char *)malloc(size + 1);
       buffer[size] = '\0';
       fread(buffer, size, 1, fd);
-      files[i-1] = buffer;
+      files[i - 1] = buffer;
     }
   } else {
-    conn = PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
+    conn =
+        PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
 
     if (PQstatus(conn) == CONNECTION_BAD) {
-	printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+      printf("Connection to database failed: %s\n", PQerrorMessage(conn));
 
-	PQfinish(conn);
-	exit(1);
+      PQfinish(conn);
+      exit(1);
     }
   }
 
