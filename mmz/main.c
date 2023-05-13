@@ -1053,7 +1053,7 @@ void run_match(int num_files, char **files) {
     u.deleted_at IS NULL\n\
     AND c.code IS NOT NULL\n\
     AND c.code != ''\n\
-    AND c.created_at > '2023-05-13 00:00'\n\
+    AND c.created_at > '2023-05-13 18:00'\n\
     ORDER BY\n\
     u.username,\n\
     c.created_at DESC;");
