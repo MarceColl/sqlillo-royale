@@ -660,7 +660,6 @@ static int me_cast(lua_State *L) {
     return 0;
   }
 
-
   if (me->p->cd[skill] <= 0) {
     printf("CAST\n");
     me->p->used_skill = skill;
@@ -1255,15 +1254,6 @@ void run_match(int num_files, char **files) {
         gs.players[i].cd[1] -= 1;
         gs.players[i].cd[2] -= 1;
 
-        for (int j = i + 1; j < gs.active_entities; j++) {
-          if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
-            if (gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
-              gs.players[i].health -= 10;
-              delete_entity(&gs, j);
-              j--;
-            }
-          }
-        }
 
         if (gs.pos[i].x < 0) {
           gs.pos[i].x = 0;
@@ -1298,6 +1288,18 @@ void run_match(int num_files, char **files) {
           delete_entity(&gs, i);
         }
       }
+    }
+
+    for (int i = 0; i < gs.n_players; i++) {
+	for (int j = i + 1; j < gs.active_entities; j++) {
+	  if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
+	    if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
+		gs.players[i].health -= 10;
+		delete_entity(&gs, j);
+		j--;
+	    }
+	  }
+	}
     }
 
     update_traces(&gs);
