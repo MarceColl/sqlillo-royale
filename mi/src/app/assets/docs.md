@@ -1,6 +1,6 @@
 # SQLillo Royale docs
 
-**Last updated 2023-05-13 16:03**
+Last updated at `2023-05-13 16:10 UTC+2`
 
 ---
 
@@ -31,7 +31,8 @@ move or cast a skill. The available functions are
 * `me:move(v)` given a vector moves in that direction this tick
 * `me:health()` returns your current health
 * `me:visible()` returns a list of visible entities
-* `me:cod()` 
+* `me:cod()` returns an object with 3 methods, `x()`, `y()` and `radius()`. If `x()` is `-1` there is no COD yet.
+* `me:cooldown(s)` returns the amount of ticks left for the given skill (uses the same numbers as `cast`). 
 * `me:cast(s, v)` casts a skill spell `s` in the `v` direction. 
 	`s` can be 0 - small projectile, damage is 10, cooldown is 1.
 	         1 - dash in the given direction
@@ -40,9 +41,10 @@ move or cast a skill. The available functions are
 The `visible()` call returns an `entity` type which has the following methods
 
 * `:pos()` returns a vec type with the entity position
-* `:type()` returns a string that represents the entity type, it can be `player` or `bullet`
-* `:id()` returns the id of the entity as an integer. You can use it to check if it's the same entity. Bullets
-don't have a stable id, players do.
+* `:alive()` 
+* `:type()` returns a string that represents the entity type, it can be `player`, `bullet` or `unknown` (this last one should never show.
+* `:owner_id()` returns a the id of the entity owner.
+* `:id()` returns the id of the entity as an integer. You can use it to check if it's the same entity. All IDs should be stable across the whole match.
 
 The `vec` type has the following methods
 
@@ -51,6 +53,12 @@ The `vec` type has the following methods
 * `:x()` returns the x component of the vector
 * `:y()` returns the x component of the vector
 * `:neg()` returns a new vector that is the result of negating the vector
+* Also you can print vectors directly since we've implemented to `__tostring` metamethod.
+
+There are also two functions:
+
+* `vec.new(x, y)` that initializes a new vector with the given x, y
+* `vec.distance(v1, v2)` that returns the distance between both vectors
 
 ---
 
