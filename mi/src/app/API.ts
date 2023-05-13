@@ -122,19 +122,19 @@ export const getLastCode = async (): Promise<GetLastCodeOutput | null> => {
     return null;
   }
 
-  return codes[codes.length - 1];
+  return codes[0];
 };
 
 type GetAllCodesOutput = {
   codes: GetLastCodeOutput[];
 };
-export const getAllCodes = async (): Promise<GetAllCodesOutput> => {
+export const getAllCodes = async(): Promise<GetAllCodesOutput> => {
   const resp = await fetch(`${API_URL}/api/private/codes`, {
-    method: "GET",
+    method: 'GET',
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
     },
   });
 
