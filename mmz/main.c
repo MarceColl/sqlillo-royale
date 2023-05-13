@@ -1014,7 +1014,8 @@ void pg_error_exit(PGconn *conn, int code) {
 void pg_result_error_handler(PGresult *res) {
   int status = PQresultStatus(res);
   if (status != PGRES_TUPLES_OK) {
-    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
+    printf("[Postgres Result ERROR] (%d) %s\n", status,
+           PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
@@ -1023,13 +1024,14 @@ void pg_result_error_handler(PGresult *res) {
 void pg_command_error_handler(PGresult *res) {
   int status = PQresultStatus(res);
   if (status != PGRES_COMMAND_OK) {
-    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
+    printf("[Postgres Command ERROR] (%d) %s\n", status,
+           PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
 }
 
-void run_match(int num_files, char **files) {
+void run_match(int num_files, char **files, char *roundillo) {
   srand(time(NULL));
 
   pthread_mutex_init(&inc_tick_cond_mut, NULL);
@@ -1040,7 +1042,10 @@ void run_match(int num_files, char **files) {
 
   int rows, n_players;
   PGresult *res;
+
   if (!files) {
+    printf("Querying from DB...\n");
+
     res = PQexec(conn,
                  "SELECT\n\
     DISTINCT ON (u.username)\n\
@@ -1072,6 +1077,7 @@ void run_match(int num_files, char **files) {
     printf("Got %d codes from DB\n", rows);
   } else {
     n_players = num_files;
+    printf("Using %d files\n", n_players);
   }
 
   gamestate_t gs = {
@@ -1369,14 +1375,14 @@ void run_match(int num_files, char **files) {
   yyjson_val *config_val = yyjson_obj_get(root, "map");
   const char *config_str = yyjson_val_write(config_val, 0, NULL);
 
-  const char *param_game[3] = {traces_str, config_str, "[]"};
+  const char *param_game[4] = {traces_str, config_str, "[]", roundillo};
 
   if (!files) {
-    PGresult *res_ins =
-        PQexecParams(conn,
-                     "INSERT INTO games (id, data, config, outcome) VALUES "
-                     "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
-                     3, NULL, param_game, NULL, NULL, 0);
+    PGresult *res_ins = PQexecParams(
+        conn,
+        "INSERT INTO games (id, data, config, outcome, round) VALUES "
+        "(uuid_generate_v4(), $1, $2, $3, $4) RETURNING id",
+        4, NULL, param_game, NULL, NULL, 0);
 
     pg_result_error_handler(res_ins);
     int i_rows = PQntuples(res_ins);
@@ -1431,22 +1437,41 @@ int main(int argc, char **argv) {
   printf(" |_| |_| |_|_|_| |_| |_|_/___|\\__,_|\n");
   printf("                                    \n");
 
+  char *roundillo = NULL;
   char **files = NULL;
-  if (argc > 1) {
-    files = (char **)malloc(sizeof(char **) * (argc - 1));
-    for (int i = 1; i < argc; i++) {
-      printf("Using file %s\n", argv[i]);
 
-      FILE *fd = fopen(argv[i], "r");
-      fseek(fd, 0, SEEK_END);
-      size_t size = ftell(fd);
-      fseek(fd, 0, SEEK_SET);
-      char *buffer = (char *)malloc(size + 1);
-      buffer[size] = '\0';
-      fread(buffer, size, 1, fd);
-      files[i - 1] = buffer;
+  bool is_files = false;
+
+  if (argc > 1) {
+    if (strncmp(argv[1], "-r", 2) == 0) {
+      if (argc < 3) {
+        printf("Invalid number of args for round method\n");
+        return 1;
+      }
+
+      printf("Using round mode: %s\n", argv[2]);
+      roundillo = argv[2];
+    } else {
+      files = (char **)malloc(sizeof(char **) * (argc - 1));
+
+      for (int i = 1; i < argc; i++) {
+        printf("Using file %s\n", argv[i]);
+
+        FILE *fd = fopen(argv[i], "r");
+        fseek(fd, 0, SEEK_END);
+        size_t size = ftell(fd);
+        fseek(fd, 0, SEEK_SET);
+        char *buffer = (char *)malloc(size + 1);
+        buffer[size] = '\0';
+        fread(buffer, size, 1, fd);
+        files[i - 1] = buffer;
+      }
+
+      is_files = true;
     }
-  } else {
+  }
+
+  if (!is_files) {
     conn =
         PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
 
@@ -1461,7 +1486,7 @@ int main(int argc, char **argv) {
   printf("Start match...\n");
 
   /* while (true) { */
-  run_match(argc - 1, files);
+  run_match(argc - 1, files, roundillo);
   /* } */
 
   printf("Exiting...\n");
