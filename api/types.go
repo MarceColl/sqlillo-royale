@@ -63,9 +63,9 @@ type Game struct {
 	Config  map[string]interface{} `json:"config" bun:"type:jsonb"`
 	Outcome json.RawMessage        `json:"outcome" bun:"type:jsonb"`
 
-	// TODO: Define all needed data here
-
 	Users []*User `json:"-" bun:"m2m:games_to_users,join:Game=User"`
+
+	Round *string `json:"round"`
 
 	CreatedAt time.Time `json:"created_at" bun:"default:now(),notnull"`
 	UpdatedAt time.Time `json:"updated_at" bun:"default:now(),notnull"`
@@ -109,6 +109,8 @@ type Ranking struct {
 
 	Username string `json:"username" bun:",pk"`
 	Rank     uint   `json:"rank" bun:",notnull"`
+
+	Round *string `json:"round"`
 
 	CreatedAt time.Time `json:"created_at" bun:"default:now(),notnull"`
 	UpdatedAt time.Time `json:"updated_at" bun:"default:now(),notnull"`
