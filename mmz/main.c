@@ -236,18 +236,35 @@ typedef struct {
 
 static int entity_id(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushinteger(L, ent->id);
   return 1;
 }
 
 static int entity_owner_id(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushinteger(L, ent->owner_id);
   return 1;
 }
 
 static int entity_pos(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
 
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
@@ -261,6 +278,11 @@ static int entity_pos(lua_State *L) {
 
 static int entity_type(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
 
   switch (ent->gs->meta[ent->id].type) {
     case PLAYER:
@@ -280,6 +302,11 @@ static int entity_type(lua_State *L) {
 static int entity_alive(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
+  if (ent == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   int alive = 0;
   switch (ent->gs->meta[ent->id].type) {
     case PLAYER:
@@ -296,14 +323,21 @@ static int entity_alive(lua_State *L) {
 
 int lua_entity_to_string(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
-  lua_pushfstring(L, "<Entity id=%d type=%d>", ent->id, ent->type);
+
+  if (ent == NULL) {
+    lua_pushfstring(L, "Entity is nil!");
+    return 1;
+  }
+
+  lua_pushfstring(L, "<Entity id=%d type=%d owner=%d>", ent->id, ent->type,
+                  ent->owner_id);
   return 1;
 }
 
 static const struct luaL_Reg entitylib_m[] = {
     {"__tostring", lua_entity_to_string},
     {"id", entity_id},
-    {"owner_id", entity_id},
+    {"owner_id", entity_owner_id},
     {"pos", entity_pos},
     {"type", entity_type},
     {"alive", entity_alive},

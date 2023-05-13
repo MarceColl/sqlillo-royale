@@ -5,7 +5,9 @@ end
 function bot_main (me)
   entities = me:visible()
   for _, ent in ipairs(entities) do
-    print(ent.id())
-    print(ent.owner_id)
+    if ent then
+      print(ent)
+      me:cast(0, vec.new(1, 0))
+    end
   end
 end
