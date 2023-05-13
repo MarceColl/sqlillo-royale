@@ -8,12 +8,15 @@ import { MatchStore, useMatchStore } from "./matchStore";
 const tempPlayers = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
+const markerPos = new THREE.Vector3();
+const markerOffset = new THREE.Vector3(0, 60, 0);
 
 const playersSizeSelector = (state: MatchStore) =>
   state.getGameState()?.players.length || 0;
 
 const DroidPlayers = () => {
   const { nodes, materials } = useGLTF(droidUrl) as any;
+  const marker = useRef<THREE.Mesh>(null);
   const mesh6 = useRef<THREE.InstancedMesh>(null);
   const mesh5 = useRef<THREE.InstancedMesh>(null);
   const mesh4 = useRef<THREE.InstancedMesh>(null);
@@ -24,7 +27,8 @@ const DroidPlayers = () => {
   const playersLength = useMatchStore(playersSizeSelector);
 
   useFrame(() => {
-    const { getGameState, match, tick } = useMatchStore.getState();
+    const { getGameState, match, tick, currentPlayer } =
+      useMatchStore.getState();
     const gameState = getGameState();
     if (!match) return;
     if (!match.players) return;
@@ -44,6 +48,11 @@ const DroidPlayers = () => {
         const color = match.players[player.id].color || [1, 1, 1];
         tempColor.setRGB(...color);
         tempPlayers.updateMatrix();
+        if (currentPlayer?.id === player.id) {
+          marker.current?.position.copy(tempPlayers.position).add(markerOffset);
+        } else {
+          marker.current?.position.set(0, 5000, 0);
+        }
       }
       for (const mesh of meshes) {
         if (!mesh.current) continue;
@@ -58,6 +67,10 @@ const DroidPlayers = () => {
 
   return (
     <group>
+      <mesh ref={marker} position={[0, 0, 0]}>
+        <cylinderGeometry args={[1, 1, 100, 32]} />
+        <meshPhongMaterial transparent color={[1, 1, 1]} opacity={0.5} />
+      </mesh>
       <instancedMesh
         ref={color}
         args={[nodes.Roundcube003.geometry, materials.COLOR, playersLength]}

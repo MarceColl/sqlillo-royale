@@ -52,10 +52,10 @@ const MatchScene = () => {
     const gameState = getGameState();
     if (!gameState) return;
     if (!match) return;
-    if (!followingPlayer) return;
-    const player = gameState.players.find(({ id }) => followingPlayer === id);
-    if (!player || !obRef.current) return;
+    if (!obRef.current) return;
     if (followingPlayer !== null) {
+      const player = gameState.players.find(({ id }) => followingPlayer === id);
+      if (!player) return;
       const [x, y] = player.pos;
       const { current: ob } = obRef;
       followPos.position.set(
@@ -70,12 +70,10 @@ const MatchScene = () => {
     } else {
       if (!obRef.current) return;
       const { current: ob } = obRef;
-      if (!ob.enabled) {
-        ob.enabled = true;
-      }
       if (followPos.children.length) {
         followPos.clear();
       }
+      ob.enabled = true;
     }
   });
   const matchMapSize = useMatchStore(matchMapSizeSelector);
