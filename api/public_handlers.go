@@ -120,7 +120,23 @@ func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	api.RankingCron()
+	if ranking, err := api.RankingCron(); err != nil {
+		log.Printf("[ERROR] Could not update ranking: %v\n", err)
 
-	return c.SendStatus(fiber.StatusOK)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	} else {
+		return c.JSON(ranking)
+	}
 }
+
+func (api *Api) PublicRankingHandler(c *fiber.Ctx) error {
+	var ranking []*Ranking = []*Ranking{}
+
+	if err := api.db.NewSelect().Model(&ranking).OrderExpr("rank DESC").Scan(c.Context()); err != nil {
+		log.Printf("[WARN] Could not get ranking: %v\n", err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(ranking)
+}
+

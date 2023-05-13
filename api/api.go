@@ -54,6 +54,7 @@ func CreateSchema(ctx context.Context, db *bun.DB) error {
 		(*Game)(nil),
 		(*GameToUser)(nil),
 		(*Code)(nil),
+		(*Ranking)(nil),
 	}
 
 	// Needed for the many-to-many relationship

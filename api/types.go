@@ -102,3 +102,15 @@ type GameOutcomeItem struct {
 	Username    string    `json:"username"`
 	CodeVersion uuid.UUID `json:"code_version"`
 }
+
+// Ranking
+type Ranking struct {
+	bun.BaseModel `bun:"table:rankings,alias:r"`
+
+	Username string `json:"username" bun:",pk"`
+	Rank     uint   `json:"rank" bun:",notnull"`
+
+	CreatedAt time.Time `json:"created_at" bun:"default:now(),notnull"`
+	UpdatedAt time.Time `json:"updated_at" bun:"default:now(),notnull"`
+	DeletedAt time.Time `json:"-" bun:",soft_delete,nullzero"`
+}

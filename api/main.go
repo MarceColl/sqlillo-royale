@@ -29,8 +29,7 @@ func main() {
 	apiRoutes.Post("/login", api.PublicLoginHandler)
 	apiRoutes.Post("/register", api.PublicRegisterHandler)
 
-	// TODO: Ranking
-	apiRoutes.Get("/ranking", NotImplementedHandler)
+	apiRoutes.Get("/ranking", api.PublicRankingHandler)
 	apiRoutes.Post("/_update-ranking", api.PublicUpdateRankingHandler)
 
 	apiRoutes.Get("/carouselle", api.PublicCarouselleHandler)
