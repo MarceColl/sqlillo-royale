@@ -43,7 +43,7 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 		if err := api.db.NewRaw(
 			`SELECT g2u.game_id, g2u.username, g2u.rank, g.created_at 
 			FROM games_to_users as g2u JOIN games AS g ON g2u.game_id = g.id
-			WHERE g.created_at > (NOW() - INTERVAL '1 hour')
+			WHERE g.created_at > (NOW() - INTERVAL '6 hours')
 			ORDER BY g.created_at ASC`,
 		).Scan(ctx, &g2u); err != nil {
 			log.Printf("[WARN] Could not get games to users: %v\n", err)
@@ -90,12 +90,12 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 			// }
 		}
 
-		if err := api.db.NewRaw(
-			`DELETE FROM rankings`,
-		).Scan(ctx, &g2u); err != nil {
-			log.Printf("[ERROR] Could not reset ranking: %v\n", err)
-			return err
-		}
+		// if err := api.db.NewRaw(
+		// 	`DELETE FROM rankings`,
+		// ).Scan(ctx, &g2u); err != nil {
+		// 	log.Printf("[ERROR] Could not reset ranking: %v\n", err)
+		// 	return err
+		// }
 
 		now := time.Now()
 

@@ -605,6 +605,12 @@ static int me_move(lua_State *L) {
   if (dir == NULL) {
     return 0;
   }
+  if (isnan(dir->x) || isnan(dir->y)) {
+    return 0;
+  }
+  if (isinf(dir->x) || isinf(dir->y)) {
+    return 0;
+  }
   me->gs->dir[eid].x = dir->x;
   me->gs->dir[eid].y = dir->y;
   return 0;
@@ -1048,6 +1054,7 @@ void run_match(int num_files, char **files) {
     u.deleted_at IS NULL\n\
     AND c.code IS NOT NULL\n\
     AND c.code != ''\n\
+    AND c.created_at > '2023-05-13 00:00'\n\
     ORDER BY\n\
     u.username,\n\
     c.created_at DESC;");
@@ -1228,7 +1235,8 @@ void run_match(int num_files, char **files) {
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
+                          i);
             gs.players[i].cd[0] = 30;
             break;
           case 1:  // DASH
@@ -1253,7 +1261,6 @@ void run_match(int num_files, char **files) {
         gs.players[i].cd[0] -= 1;
         gs.players[i].cd[1] -= 1;
         gs.players[i].cd[2] -= 1;
-
 
         if (gs.pos[i].x < 0) {
           gs.pos[i].x = 0;
@@ -1284,22 +1291,23 @@ void run_match(int num_files, char **files) {
 
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
-	  printf("BULLET OUT OF BOUNDS\n");
+          printf("BULLET OUT OF BOUNDS\n");
           delete_entity(&gs, i);
         }
       }
     }
 
     for (int i = 0; i < gs.n_players; i++) {
-	for (int j = i + 1; j < gs.active_entities; j++) {
-	  if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
-	    if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
-		gs.players[i].health -= 10;
-		delete_entity(&gs, j);
-		j--;
-	    }
-	  }
-	}
+      for (int j = i + 1; j < gs.active_entities; j++) {
+        if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ &&
+            gs.meta[j].owner != i) {
+          if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
+            gs.players[i].health -= 10;
+            delete_entity(&gs, j);
+            j--;
+          }
+        }
+      }
     }
 
     update_traces(&gs);
