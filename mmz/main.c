@@ -69,10 +69,10 @@ typedef struct {
 cod_timing_t cod_timings[] = {
     {.tick = 0, .radius = 800, .speed = 1},
     {.tick = 800, .radius = 150, .speed = 1},
-    {.tick = 1200, .radius = 90, .speed = 1},
-    {.tick = 1500, .radius = 40, .speed = 1},
-    {.tick = 1700, .radius = 10, .speed = 1},
-    {.tick = 1900, .radius = 0, .speed = 1},
+    {.tick = 1500, .radius = 90, .speed = 1},
+    {.tick = 2000, .radius = 40, .speed = 1},
+    {.tick = 2500, .radius = 10, .speed = 1},
+    {.tick = 3000, .radius = 0, .speed = 1},
     {.tick = -1, .radius = -1, .speed = -1},
 };
 
