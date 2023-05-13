@@ -10,6 +10,7 @@ export const PrivateRoutes = {
   matchList: "/match-list",
   match: "/match/:id",
   ranking: "/ranking",
+  traceMatch: "/trace-match"
 } as const;
 
 export const Routes = {

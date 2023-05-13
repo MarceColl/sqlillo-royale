@@ -8,6 +8,7 @@ import {
   EditorPage,
   RankingPage,
   MatchPage,
+  TraceMatchPage,
   CarousellePage,
 } from "@/app/pages";
 import { useAuth } from "./hooks";
@@ -67,6 +68,9 @@ const AppRoutes = () => {
       </Route>
       <Route path={Routes.match}>
         {({ id }) => <MatchPage matchId={id} />}
+      </Route>
+      <Route path={Routes.traceMatch}>
+        <TraceMatchPage/>
       </Route>
     </Router>
   );

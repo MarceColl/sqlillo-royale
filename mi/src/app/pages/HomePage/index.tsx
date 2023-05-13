@@ -130,6 +130,9 @@ const HomePage = () => {
         <Link to={Routes.matchList}>
           <S.Button>Matches</S.Button>
         </Link>
+        <Link to={Routes.traceMatch}>
+          <S.Button>Load Match From Trace</S.Button>
+        </Link>
         <Link to={Routes.ranking}>
           <S.Button>Ranking</S.Button>
         </Link>
