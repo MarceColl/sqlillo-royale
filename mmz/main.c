@@ -789,7 +789,7 @@ void call_bot_init(lua_State *L, player_t *p, gamestate_t *gs) {
 }
 
 void too_much_instr_hook(lua_State *L, lua_Debug *ar) {
-  luaL_error(L, "TOO MUCH");
+  // luaL_error(L, "TOO MUCH");
 }
 
 void *player_thread(void *data) {
