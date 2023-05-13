@@ -1,4 +1,8 @@
-# SQLillo Royale
+# SQLillo Royale docs
+
+Last updated at `2023-05-13 16:10 UTC+2`
+
+---
 
 Your task is to program a bot that survives for as long as possible.
 
@@ -55,6 +59,8 @@ There are also two functions:
 
 * `vec.new(x, y)` that initializes a new vector with the given x, y
 * `vec.distance(v1, v2)` that returns the distance between both vectors
+
+---
 
 ## Sample code
 
