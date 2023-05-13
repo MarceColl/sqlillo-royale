@@ -1337,6 +1337,8 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     files = (char **)malloc(sizeof(char **) * (argc - 1));
     for (int i = 1; i < argc; i++) {
+      printf("Using file %s\n", argv[i]);
+
       FILE *fd = fopen(argv[i], "r");
       fseek(fd, 0, SEEK_END);
       size_t size = ftell(fd);
@@ -1345,8 +1347,6 @@ int main(int argc, char **argv) {
       buffer[size] = '\0';
       fread(buffer, size, 1, fd);
       files[i - 1] = buffer;
-
-      printf("File %s\n", files[i - 1]);
     }
   } else {
     conn =
