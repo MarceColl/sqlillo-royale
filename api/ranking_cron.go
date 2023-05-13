@@ -80,6 +80,10 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 			UpdateRatings(grouped[id].Ranks, ranking, 32)
 		}
 
+		for username, rank := range ranking {
+			log.Println(username, rank)
+		}
+
 		return nil
 	}); err != nil {
 		return nil, err
