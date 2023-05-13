@@ -969,7 +969,6 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
                   vecf_t *dir, int owner) {
   gs->active_entities += 1;
   int eid = gs->active_entities;
-  printf("CREATE %d\n", eid);
 
   gs->pos[eid].x = pos->x;
   gs->pos[eid].y = pos->y;
@@ -988,7 +987,6 @@ void delete_entity(gamestate_t *gs, int eid) {
   if (last_eid == eid) {
     return;
   }
-  printf("DELETE %d\n", eid);
   gs->pos[eid].x = gs->pos[last_eid].x;
   gs->pos[eid].y = gs->pos[last_eid].y;
   gs->dir[eid].x = gs->dir[last_eid].x;
@@ -1284,7 +1282,6 @@ void run_match(int num_files, char **files) {
 
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
-	  printf("BULLET OUT OF BOUNDS\n");
           delete_entity(&gs, i);
         }
       }
