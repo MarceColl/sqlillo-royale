@@ -682,11 +682,32 @@ static int me_cod(lua_State *L) {
   return 1;
 }
 
-static const struct luaL_Reg melib_m[] = {
-    {"health", me_health}, {"cod", me_cod},           {"move", me_move},
-    {"id", me_id},         {"username", me_username}, {"visible", me_visible},
-    {"cast", me_cast},     {"pos", me_pos},           {"target", me_target},
-    {NULL, NULL}};
+static int me_cooldown(lua_State *L) {
+  me_t *me = (me_t *)lua_touserdata(L, 1);
+  int skill = luaL_checkinteger(L, 2);
+
+  if (skill < 0 || skill > 2) {
+    printf("[WARN] Invalid call to `cooldown` for skil %d\n", skill);
+
+    lua_pushnil(L);
+    return 1;
+  }
+
+  lua_pushnumber(L, me->p->cd[skill]);
+  return 1;
+}
+
+static const struct luaL_Reg melib_m[] = {{"health", me_health},
+                                          {"cod", me_cod},
+                                          {"move", me_move},
+                                          {"id", me_id},
+                                          {"username", me_username},
+                                          {"visible", me_visible},
+                                          {"cast", me_cast},
+                                          {"pos", me_pos},
+                                          {"target", me_target},
+                                          {"cooldown", me_cooldown},
+                                          {NULL, NULL}};
 
 static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
 

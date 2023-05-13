@@ -10,4 +10,7 @@ function bot_main (me)
       me:cast(0, vec.new(1, 0))
     end
   end
+
+  print(me:cooldown(-1))
+  print(me:cooldown(4))
 end

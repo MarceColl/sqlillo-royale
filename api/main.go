@@ -31,6 +31,7 @@ func main() {
 
 	// TODO: Ranking
 	apiRoutes.Get("/ranking", NotImplementedHandler)
+	apiRoutes.Post("/_update-ranking", api.PublicUpdateRankingHandler)
 
 	apiRoutes.Get("/carouselle", api.PublicCarouselleHandler)
 	apiRoutes.Get("/games/:id", api.PublicGameInfoByIdHandler)

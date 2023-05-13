@@ -112,3 +112,15 @@ func (api *Api) PublicGameByIdWsHandler(c *websocket.Conn) {
 
 	return
 }
+
+func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
+	auth, ok := c.GetReqHeaders()["X-Sqlillo"]
+
+	if !ok || auth != "sqlillo" {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	api.RankingCron()
+
+	return c.SendStatus(fiber.StatusOK)
+}
