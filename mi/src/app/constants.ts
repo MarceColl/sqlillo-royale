@@ -3,6 +3,7 @@ export const PublicRoutes = {
   login: "/login",
   register: "/register",
   carouselle: "/carouselle",
+  tracePlayer: "/trace-player",
 } as const;
 export const PrivateRoutes = {
   home: "/home",

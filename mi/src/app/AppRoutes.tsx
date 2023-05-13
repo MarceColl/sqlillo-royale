@@ -8,6 +8,7 @@ import {
   EditorPage,
   RankingPage,
   MatchPage,
+  TraceMatchPage,
   CarousellePage,
 } from "@/app/pages";
 import { useAuth } from "./hooks";
@@ -17,28 +18,18 @@ import { IndexPage } from "./pages/IndexPage";
 const AppRoutes = () => {
   const { goTo } = useRouter();
   const { isAuthenticated } = useAuth();
-  const publicMatchings = useMatcher(Object.values(PublicRoutes));
   const privateMatchings = useMatcher(Object.values(PrivateRoutes));
   useEffect(() => {
-    const isAccessingPublic = Object.values(publicMatchings).some(
-      ({ isMatch }) => isMatch
-    );
     const isAccessingPrivate = Object.values(privateMatchings).some(
       ({ isMatch }) => isMatch
     );
-    if (isAccessingPublic) {
-      if (isAuthenticated) {
-        goTo(Routes.home);
-        return;
-      }
-    }
     if (isAccessingPrivate) {
       if (!isAuthenticated) {
         goTo(Routes.login);
         return;
       }
     }
-  }, [publicMatchings, privateMatchings, isAuthenticated]);
+  }, [privateMatchings, isAuthenticated]);
   return (
     <Router>
       <Route path={Routes.carouselle}>
@@ -67,6 +58,9 @@ const AppRoutes = () => {
       </Route>
       <Route path={Routes.match}>
         {({ id }) => <MatchPage matchId={id} />}
+      </Route>
+      <Route path={Routes.tracePlayer}>
+        <TraceMatchPage/>
       </Route>
     </Router>
   );
