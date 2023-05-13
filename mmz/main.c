@@ -31,6 +31,8 @@
 #define MELEE_DAMAGE 20.f
 #define MELEE_COOLDOWN 50
 
+uint64_t fid_current = 0;
+
 typedef enum { FREE, RUNNING, FINISHED, ERROR } match_thread_status;
 
 enum entity_type {
@@ -129,6 +131,7 @@ typedef struct {
 typedef struct {
   enum entity_type type;
   int owner;
+  uint64_t fid;
 } entity_metadata_t;
 
 typedef struct {
@@ -619,7 +622,7 @@ static int me_visible(lua_State *L) {
       luaL_getmetatable(L, "mimizu.entity");
       lua_setmetatable(L, -2);
 
-      ent->id = i;
+      ent->id = gs->meta[i].fid;
       ent->type = gs->meta[i].type;
       ent->owner_id = gs->meta[i].owner;
       ent->gs = gs;
@@ -970,6 +973,8 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
   gs->dir[eid].y = dir->y;
   gs->meta[eid].type = ty;
   gs->meta[eid].owner = owner;
+  gs->meta[eid].fid = fid_current;
+  fid_current += 1;
   return eid;
 }
 
@@ -985,6 +990,7 @@ void delete_entity(gamestate_t *gs, int eid) {
   gs->dir[eid].y = gs->dir[last_eid].y;
   gs->meta[eid].type = gs->meta[last_eid].type;
   gs->meta[eid].owner = gs->meta[last_eid].owner;
+  gs->meta[eid].fid = gs->meta[last_eid].fid;
 }
 
 /**
