@@ -66,8 +66,8 @@ const MatchPage = ({ matchId, carouselle }: Props) => {
 
   return (
     <S.Container>
-      <div>Seeing match: {match.name}</div>
       <S.MatchPlayer />
+      <S.MatchTitle>{match.id.split("-")[0]}</S.MatchTitle>
     </S.Container>
   );
 };

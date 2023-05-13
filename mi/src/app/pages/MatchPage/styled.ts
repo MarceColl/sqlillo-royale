@@ -15,3 +15,11 @@ export const MatchPlayer = styled(RawMatchPlayer)`
   display: flex;
   flex: 1;
 `;
+
+export const MatchTitle = styled.div`
+  position: absolute;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+`;
