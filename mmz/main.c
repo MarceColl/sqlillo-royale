@@ -240,6 +240,12 @@ static int entity_id(lua_State *L) {
   return 1;
 }
 
+static int entity_owner_id(lua_State *L) {
+  lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
+  lua_pushinteger(L, ent->owner_id);
+  return 1;
+}
+
 static int entity_pos(lua_State *L) {
   lua_entity_t *ent = (lua_entity_t *)lua_touserdata(L, 1);
 
@@ -297,6 +303,7 @@ int lua_entity_to_string(lua_State *L) {
 static const struct luaL_Reg entitylib_m[] = {
     {"__tostring", lua_entity_to_string},
     {"id", entity_id},
+    {"owner_id", entity_id},
     {"pos", entity_pos},
     {"type", entity_type},
     {"alive", entity_alive},
