@@ -4,6 +4,7 @@ export const PublicRoutes = {
   register: "/register",
   carouselle: "/carouselle",
   tracePlayer: "/trace-player",
+  ranking: "/ranking",
 } as const;
 export const PrivateRoutes = {
   home: "/home",

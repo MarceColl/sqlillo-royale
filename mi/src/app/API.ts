@@ -182,19 +182,16 @@ export const getMatchList = async (): Promise<GetMatchListOutput> => {
 };
 
 type GetRankingOutput = {
-  ranking: User[];
+  ranking: {username: string; rank: number;}[];
 };
-export const getRanking = async (): Promise<GetRankingOutput> => {
-  // TODO
-  console.log("[API] get ranking");
-  await wait(500);
-  return {
-    ranking: [
-      { id: "user-1", username: "User 1" },
-      { id: "user-2", username: "User 2" },
-      { id: "user-3", username: "User 3" },
-    ],
-  };
+export const getRanking = async(): Promise<GetRankingOutput> => {
+  const resp = await fetch(`${API_URL}/api/ranking`, {
+    method: 'GET',
+  });
+
+  const ranking = await resp.json();
+
+  return {ranking: ranking as GetRankingOutput['ranking']};
 };
 
 type GetMatchInput = {
