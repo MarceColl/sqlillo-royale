@@ -910,6 +910,7 @@ void update_traces(gamestate_t *gs) {
     yyjson_mut_val *key_tick = yyjson_mut_str(gs->traces, "t");
     yyjson_mut_val *key_health = yyjson_mut_str(gs->traces, "h");
     yyjson_mut_val *key_type = yyjson_mut_str(gs->traces, "ty");
+    yyjson_mut_val *key_used_skill = yyjson_mut_str(gs->traces, "us");
 
     yyjson_mut_val *str_username = yyjson_mut_null(gs->traces);
 
@@ -925,6 +926,8 @@ void update_traces(gamestate_t *gs) {
     yyjson_mut_val *num_health =
         yyjson_mut_int(gs->traces, gs->players[i].health);
     yyjson_mut_val *num_type = yyjson_mut_int(gs->traces, gs->meta[i].type);
+    yyjson_mut_val *num_u_skill =
+        yyjson_mut_int(gs->traces, gs->players[i].used_skill);
 
     yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
 
@@ -935,6 +938,7 @@ void update_traces(gamestate_t *gs) {
     yyjson_mut_obj_add(item, key_tick, num_tick);
     yyjson_mut_obj_add(item, key_health, num_health);
     yyjson_mut_obj_add(item, key_type, num_type);
+    yyjson_mut_obj_add(item, key_used_skill, num_u_skill);
 
     yyjson_mut_arr_append(gs->traces_arr, item);
   }
