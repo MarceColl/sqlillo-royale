@@ -38,7 +38,6 @@ const Bullets = () => {
         ref={ref}
         args={[sphereGeometry, material, bulletsLength || 0]}
       />
-      <pointLight />
     </group>
   );
 };

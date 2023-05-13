@@ -16,6 +16,7 @@ import { useMatchStore } from "./matchStore";
 import { TICK_RATE_MS } from "./constants";
 import { useRef } from "react";
 import { Cod } from "./Cod";
+import { Obstacles } from "./Obstacles";
 
 const followPos = new THREE.Object3D();
 // hex value from vec3(5.0 / 255.0, 10.0 / 255.0, 25.0 / 255.0);
@@ -115,6 +116,7 @@ const MatchScene = () => {
         <Bullets />
         <DroidPlayers />
         <Cod />
+        <Obstacles />
       </group>
     </>
   );
