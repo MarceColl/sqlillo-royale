@@ -7,7 +7,6 @@ import (
 
 	"context"
 	"database/sql"
-	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
@@ -73,20 +72,12 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 			ranking[curr.Username] = 0.0
 		}
 
-		if b, err := json.MarshalIndent(grouped, "", "  "); err == nil {
-			log.Println(string(b))
-		}
-
-		log.Println("----------")
+		// if b, err := json.MarshalIndent(grouped, "", "  "); err == nil {
+		// 	log.Println(string(b))
+		// }
 
 		for _, id := range ids {
 			UpdateRatings(grouped[id].Ranks, ranking, 32)
-
-			log.Println(id)
-
-			if b, err := json.MarshalIndent(grouped, "", "  "); err == nil {
-				log.Println(string(b))
-			}
 		}
 
 		return nil
