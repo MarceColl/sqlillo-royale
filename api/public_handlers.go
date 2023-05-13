@@ -139,4 +139,3 @@ func (api *Api) PublicRankingHandler(c *fiber.Ctx) error {
 
 	return c.JSON(ranking)
 }
-
