@@ -385,12 +385,24 @@ static int vec_distance(lua_State *L) {
 
 static int vec_x(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
+
+  if (vec1 == NULL) {
+    lua_pushnumber(L, 0);
+    return 1;
+  }
+
   lua_pushnumber(L, vec1->x);
   return 1;
 }
 
 static int vec_y(lua_State *L) {
   vecf_t *vec1 = (vecf_t *)lua_touserdata(L, 1);
+
+  if (vec1 == NULL) {
+    lua_pushnumber(L, 0);
+    return 1;
+  }
+
   lua_pushnumber(L, vec1->y);
   return 1;
 }
@@ -402,6 +414,13 @@ static int vec_rot(lua_State *L) {
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
+
+  if (vec1 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
 
   vec->x = cos(angle) * vec1->x + sin(angle) * vec1->y;
   vec->y = sin(angle) * vec1->x + cos(angle) * vec1->y;
@@ -415,6 +434,13 @@ static int vec_neg(lua_State *L) {
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
+
+  if (vec1 == NULL) {
+    vec->x = 0;
+    vec->y = 0;
+
+    return 1;
+  }
 
   vec->x = -1 * vec1->x;
   vec->y = -1 * vec1->y;
