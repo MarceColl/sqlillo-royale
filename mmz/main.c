@@ -585,6 +585,8 @@ static int me_username(lua_State *L) {
 static int me_pos(lua_State *L) {
   me_t *me = (me_t *)lua_touserdata(L, 1);
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
+  luaL_getmetatable(L, "mimizu.vec");
+  lua_setmetatable(L, -2);
   vec->x = me->gs->pos[me->p->id].x;
   vec->y = me->gs->pos[me->p->id].y;
   return 1;
