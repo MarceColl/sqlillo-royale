@@ -90,8 +90,26 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 			// }
 		}
 
+		if err := api.db.NewRaw(
+			`DELETE FROM rankings`,
+		).Scan(ctx, &g2u); err != nil {
+			log.Printf("[ERROR] Could not reset ranking: %v\n", err)
+			return err
+		}
+
+		now := time.Now()
+
 		for username, rank := range ranking {
 			log.Println(username, rank)
+
+			if _, err := api.db.NewInsert().Model(&Ranking{
+				Username:  username,
+				Rank:      uint(math.Round(rank)),
+				CreatedAt: now,
+			}).Exec(ctx); err != nil {
+				log.Printf("[ERROR] Could not store ranking for %v and %f: %v\n", username, rank, err)
+				return err
+			}
 		}
 
 		return nil
