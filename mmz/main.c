@@ -571,7 +571,7 @@ static int me_visible(lua_State *L) {
   int idx = 1;
   for (int i = 0; i < gs->active_entities; i++) {
     vecf_t *other = &gs->pos[i];
-    if ((me->p->id != i) && dist(&gs->pos[me->p->id], other) < 50) {
+    if (me->p->id != i) {
       if (gs->meta[i].type == PLAYER && gs->players[i].dead) continue;
       lua_entity_t *ent = lua_newuserdata(L, sizeof(lua_entity_t));
       luaL_getmetatable(L, "mimizu.entity");
