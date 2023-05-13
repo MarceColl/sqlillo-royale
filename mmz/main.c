@@ -624,7 +624,7 @@ static int me_visible(lua_State *L) {
       luaL_getmetatable(L, "mimizu.entity");
       lua_setmetatable(L, -2);
 
-      ent->id = gs->meta[i].fid;
+      ent->id = i;
       ent->type = gs->meta[i].type;
       ent->owner_id = gs->meta[i].owner;
       ent->gs = gs;
@@ -660,7 +660,9 @@ static int me_cast(lua_State *L) {
     return 0;
   }
 
+
   if (me->p->cd[skill] <= 0) {
+    printf("CAST\n");
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
     me->p->skill_dir.y = dir->y;
@@ -968,6 +970,7 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
                   vecf_t *dir, int owner) {
   gs->active_entities += 1;
   int eid = gs->active_entities;
+  printf("CREATE %d\n", eid);
 
   gs->pos[eid].x = pos->x;
   gs->pos[eid].y = pos->y;
@@ -986,6 +989,7 @@ void delete_entity(gamestate_t *gs, int eid) {
   if (last_eid == eid) {
     return;
   }
+  printf("DELETE %d\n", eid);
   gs->pos[eid].x = gs->pos[last_eid].x;
   gs->pos[eid].y = gs->pos[last_eid].y;
   gs->dir[eid].x = gs->dir[last_eid].x;
@@ -1096,6 +1100,8 @@ void run_match(int num_files, char **files) {
 
   printf("Setup thread data for %d\n", gs.n_players);
 
+  fid_current = gs.n_players;
+
   for (int i = 0; i < MAX_ENTITIES; i++) {
     gs.pos[i] = (vecf_t){.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
     gs.meta[i] = (entity_metadata_t){.owner = i, .type = NONE};
@@ -1122,6 +1128,7 @@ void run_match(int num_files, char **files) {
       }
 
       gs.meta[i].type = PLAYER;
+      gs.meta[i].fid = i;
       ptd[i] = (player_thread_data_t){
           .id = i, .gs = &gs, .done = false, .curr_tick = -1, .dead = false};
 
@@ -1222,8 +1229,7 @@ void run_match(int num_files, char **files) {
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
-                          i);
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
             gs.players[i].cd[0] = 30;
             break;
           case 1:  // DASH
@@ -1288,6 +1294,7 @@ void run_match(int num_files, char **files) {
 
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
+	  printf("BULLET OUT OF BOUNDS\n");
           delete_entity(&gs, i);
         }
       }
