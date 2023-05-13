@@ -229,6 +229,7 @@ typedef struct {
 
 typedef struct {
   enum entity_type type;
+  int owner_id;
   int id;
   gamestate_t *gs;
 } lua_entity_t;
@@ -579,6 +580,7 @@ static int me_visible(lua_State *L) {
 
       ent->id = i;
       ent->type = gs->meta[i].type;
+      ent->owner_id = gs->meta[i].owner;
       ent->gs = gs;
 
       lua_rawseti(L, -2, idx++);
