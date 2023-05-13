@@ -24,7 +24,7 @@
 #endif
 
 #define MAX_ENTITIES 20000
-#define BASE_PLAYER_SPEED 20
+#define BASE_PLAYER_SPEED 30
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
 #define MELEE_RANGE 2.f
@@ -67,12 +67,12 @@ typedef struct {
 } ranking_entry_t;
 
 cod_timing_t cod_timings[] = {
-    {.tick = 0, .radius = 500, .speed = 20},
-    {.tick = 800, .radius = 150, .speed = 5},
-    {.tick = 1200, .radius = 90, .speed = 3},
-    {.tick = 1500, .radius = 40, .speed = 3},
-    {.tick = 1700, .radius = 10, .speed = 2},
-    {.tick = 1900, .radius = 0, .speed = 1},
+    {.tick = 0, .radius = 800, .speed = 1},
+    {.tick = 800, .radius = 150, .speed = 1},
+    {.tick = 1500, .radius = 90, .speed = 1},
+    {.tick = 2000, .radius = 40, .speed = 1},
+    {.tick = 2500, .radius = 10, .speed = 1},
+    {.tick = 3000, .radius = 0, .speed = 1},
     {.tick = -1, .radius = -1, .speed = -1},
 };
 
@@ -818,6 +818,7 @@ void *player_thread(void *data) {
   if (luaL_loadstring(L, code) || lua_pcall(L, 0, 0, 0)) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
     ptd->dead = true;
+    this_player->health = 0;
     return NULL;
   }
 
@@ -975,7 +976,6 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
                   vecf_t *dir, int owner) {
   gs->active_entities += 1;
   int eid = gs->active_entities;
-  printf("CREATE %d\n", eid);
 
   gs->pos[eid].x = pos->x;
   gs->pos[eid].y = pos->y;
@@ -994,7 +994,6 @@ void delete_entity(gamestate_t *gs, int eid) {
   if (last_eid == eid) {
     return;
   }
-  printf("DELETE %d\n", eid);
   gs->pos[eid].x = gs->pos[last_eid].x;
   gs->pos[eid].y = gs->pos[last_eid].y;
   gs->dir[eid].x = gs->dir[last_eid].x;
@@ -1054,7 +1053,7 @@ void run_match(int num_files, char **files) {
     u.deleted_at IS NULL\n\
     AND c.code IS NOT NULL\n\
     AND c.code != ''\n\
-    AND c.created_at > '2023-05-13 00:00'\n\
+    AND c.created_at > '2023-05-13 18:00'\n\
     ORDER BY\n\
     u.username,\n\
     c.created_at DESC;");
@@ -1115,7 +1114,7 @@ void run_match(int num_files, char **files) {
     if (i < gs.n_players) {
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
-                                 .health = 100,
+                                 .health = 30,
                                  // No skill used
                                  .used_skill = -1,
                                  // No default movement
@@ -1150,7 +1149,7 @@ void run_match(int num_files, char **files) {
   float curr_time = 0;
   printf("Starting match...\n");
 
-  vecf_t cod_center = {.x = 250, .y = 250};
+  vecf_t cod_center = (vecf_t){.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
   int current_cod = 0;
   int current_radius = cod_timings[current_cod].radius;
   int target_radius = cod_timings[current_cod].radius;
@@ -1237,12 +1236,12 @@ void run_match(int num_files, char **files) {
           case 0:  // SMALL PROJ
             create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
                           i);
-            gs.players[i].cd[0] = 30;
+            gs.players[i].cd[0] = 60;
             break;
           case 1:  // DASH
             gs.pos[i].x += gs.players[i].skill_dir.x * 10;
             gs.pos[i].y += gs.players[i].skill_dir.y * 10;
-            gs.players[i].cd[1] = 260;
+            gs.players[i].cd[1] = 200;
             break;
           case 2:  // MELEE
             for (int j = 0; j < gs.n_players; j++) {
@@ -1291,7 +1290,6 @@ void run_match(int num_files, char **files) {
 
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
-          printf("BULLET OUT OF BOUNDS\n");
           delete_entity(&gs, i);
         }
       }
