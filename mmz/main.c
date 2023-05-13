@@ -630,7 +630,7 @@ static int me_cod(lua_State *L) {
 }
 
 static const struct luaL_Reg melib_m[] = {
-    {"health", me_health}, {"me_cod", me_cod},        {"move", me_move},
+    {"health", me_health}, {"cod", me_cod},           {"move", me_move},
     {"id", me_id},         {"username", me_username}, {"visible", me_visible},
     {"cast", me_cast},     {"pos", me_pos},           {"target", me_target},
     {NULL, NULL}};
@@ -889,6 +889,11 @@ int create_entity(gamestate_t *gs, enum entity_type ty, vecf_t *pos,
                   vecf_t *dir, int owner) {
   gs->active_entities += 1;
   int eid = gs->active_entities;
+
+  char username_str[64];
+  sprintf(gs->players[eid].username, "___internal_id__%d", eid);
+  gs->players[eid].username = username_str;
+
   gs->pos[eid].x = pos->x;
   gs->pos[eid].y = pos->y;
   gs->dir[eid].x = dir->x;
@@ -904,6 +909,7 @@ void delete_entity(gamestate_t *gs, int eid) {
   if (last_eid == eid) {
     return;
   }
+  gs->players[eid].username = gs->players[last_eid].username;
   gs->pos[eid].x = gs->pos[last_eid].x;
   gs->pos[eid].y = gs->pos[last_eid].y;
   gs->dir[eid].x = gs->dir[last_eid].x;
