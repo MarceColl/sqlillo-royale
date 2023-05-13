@@ -878,7 +878,8 @@ void update_traces(gamestate_t *gs) {
 void save_traces(gamestate_t *gs) {
   yyjson_write_err json_err;
 
-  if (!yyjson_mut_write_file("traces.json", gs->traces, 0, NULL, &json_err)) {
+  if (!yyjson_mut_write_file("files/traces.json", gs->traces, 0, NULL,
+                             &json_err)) {
     printf("[ERROR] Could not save data to JSON: (%u) %s\n", json_err.code,
            json_err.msg);
   }

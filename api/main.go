@@ -51,6 +51,8 @@ func main() {
 
 	apiRoutes.Get("/games/:id/ws", websocket.New(api.PublicGameByIdWsHandler))
 
+	api.SetupRankingCron()
+
 	port := os.Getenv("PORT")
 
 	if port == "" {
