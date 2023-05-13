@@ -1,29 +1,27 @@
 import { Button as RawButton } from "@/app/ui";
-import styled from "styled-components";
+import { Transaction } from "grommet-icons";
+import styled, { css } from "styled-components";
 
 export const Container = styled.div`
   flex: 1;
   display: flex;
-  flex-direction: column;
   height: 100%;
 `;
 
-export const Split = styled.div`
-  height: 100%;
-  position: fixed;
-  z-index: 1;
-  top: 0;
-  overflow-x: hidden;
+export const EditorContainer = styled.div<{ $right: boolean }>`
+  position: relative;
+  flex: 2;
+  resize: horizontal;
+  ${({ $right }) =>
+    $right &&
+    css`
+      order: 1;
+    `}
 `;
 
-export const Left = styled(Split)`
-  left: 0;
-  width: 60%;
-`;
-
-export const Right = styled(Split)`
-  right: 0;
-  width: 40%;
+export const DocsContainer = styled.div`
+  flex: 1;
+  min-width: 100px;
 `;
 
 export const WithMargin = styled.div`
@@ -44,3 +42,5 @@ export const Button = styled(RawButton)`
   line-height: 2rem;
   padding: 0.5rem 1rem;
 `;
+
+export const ChangeIcon = styled(Transaction)``;

@@ -3,13 +3,14 @@ import { useQuery } from "react-query";
 import { useState, useEffect } from "react";
 import { Editor } from "@monaco-editor/react";
 import { useMutation } from "react-query";
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown from "react-markdown";
 import docs from "@/app/assets/docs.md?raw";
 
 import * as API from "@/app/API";
 import * as S from "./styled";
 
 const EditorPage = () => {
+  const [editorLeft, setEditorLeft] = useState<boolean>(true);
   const { data, isLoading } = useQuery(
     [Queries.code],
     () => {
@@ -27,6 +28,9 @@ const EditorPage = () => {
   };
   const handleChange = (value: string | undefined) => {
     setValue(value || "");
+  };
+  const handleSwitchSides = () => {
+    setEditorLeft((pre) => !pre);
   };
 
   useEffect(() => {
@@ -49,17 +53,18 @@ const EditorPage = () => {
     return <>Loading...</>;
   }
 
-  console.log({ docs })
-
   return (
     <S.Container>
-      <S.Left>
+      <S.EditorContainer $right={!editorLeft}>
         <S.Header>
           <S.Button secondary onClick={handleBack}>
             Go back
           </S.Button>
           <S.Button primary onClick={handleSave} busy={isMutationLoading}>
             Save code
+          </S.Button>
+          <S.Button secondary onClick={handleSwitchSides}>
+            <S.ChangeIcon />
           </S.Button>
         </S.Header>
         <Editor
@@ -68,14 +73,12 @@ const EditorPage = () => {
           value={value}
           onChange={handleChange}
         />
-      </S.Left>
-      <S.Right>
+      </S.EditorContainer>
+      <S.DocsContainer>
         <S.WithMargin>
-          <ReactMarkdown>
-            {docs}
-          </ReactMarkdown>
+          <ReactMarkdown>{docs}</ReactMarkdown>
         </S.WithMargin>
-      </S.Right>
+      </S.DocsContainer>
     </S.Container>
   );
 };
