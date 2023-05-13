@@ -132,7 +132,16 @@ func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
 func (api *Api) PublicRankingHandler(c *fiber.Ctx) error {
 	var ranking []*Ranking = []*Ranking{}
 
-	if err := api.db.NewSelect().Model(&ranking).OrderExpr("rank DESC").Scan(c.Context()); err != nil {
+	var lastCreatedAt time.Time
+
+	if err := api.db.NewRaw(
+		"SELECT max(created_at) FROM rankings",
+	).Scan(c.Context(), &lastCreatedAt); err != nil {
+		log.Printf("[WARN] Could not get last ranking created_at: %v\n", err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	if err := api.db.NewSelect().Model(&ranking).OrderExpr("rank DESC").Where("created_at = ?", lastCreatedAt).Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not get ranking: %v\n", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
