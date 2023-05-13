@@ -818,6 +818,7 @@ void *player_thread(void *data) {
   if (luaL_loadstring(L, code) || lua_pcall(L, 0, 0, 0)) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
     ptd->dead = true;
+    this_player->health = 0;
     return NULL;
   }
 
