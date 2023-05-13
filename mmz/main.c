@@ -650,6 +650,11 @@ static int me_cast(lua_State *L) {
   int skill = luaL_checkinteger(L, 2);
   vecf_t *dir = (vecf_t *)lua_touserdata(L, 3);
 
+  if (dir == NULL) {
+    printf("Can not cast without dir\n");
+    return 0;
+  }
+
   if (me->p->cd[skill] <= 0) {
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
@@ -664,6 +669,11 @@ static int me_cod(lua_State *L) {
   cod_t *cod = (cod_t *)lua_newuserdata(L, sizeof(cod_t));
   luaL_getmetatable(L, "mimizu.cod");
   lua_setmetatable(L, -2);
+
+  if (cod == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
 
   cod->x = me->gs->cod.x;
   cod->y = me->gs->cod.y;
