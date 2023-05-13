@@ -32,7 +32,7 @@ const Cod = () => {
 
   return (
     <mesh ref={ref} position={restPosition}>
-      <cylinderGeometry args={[0.5, 0.5, 100, 64]} />
+      <cylinderGeometry args={[1, 1, 100, 64]} />
       {/* <meshStandardMaterial color={"hotpink"} transparent opacity={0.5} /> */}
       <shaderMaterial
         attach="material"
