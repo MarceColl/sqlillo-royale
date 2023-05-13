@@ -67,10 +67,10 @@ typedef struct {
 } ranking_entry_t;
 
 cod_timing_t cod_timings[] = {
-    {.tick = 0, .radius = 500, .speed = 3},
-    {.tick = 800, .radius = 150, .speed = 2},
-    {.tick = 1200, .radius = 90, .speed = 2},
-    {.tick = 1500, .radius = 40, .speed = 2},
+    {.tick = 0, .radius = 800, .speed = 1},
+    {.tick = 800, .radius = 150, .speed = 1},
+    {.tick = 1200, .radius = 90, .speed = 1},
+    {.tick = 1500, .radius = 40, .speed = 1},
     {.tick = 1700, .radius = 10, .speed = 1},
     {.tick = 1900, .radius = 0, .speed = 1},
     {.tick = -1, .radius = -1, .speed = -1},
