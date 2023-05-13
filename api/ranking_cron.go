@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
-	"time"
 	"math"
+	"time"
 
 	"context"
 	"database/sql"
@@ -21,16 +21,16 @@ func (api *Api) SetupRankingCron() {
 }
 
 type RankingData struct {
-	GameID uuid.UUID `json:"game_id"`
-	Username string `json:"username"`
-	Rank int `json:"rank"`
+	GameID    uuid.UUID `json:"game_id"`
+	Username  string    `json:"username"`
+	Rank      int       `json:"rank"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type RankingGrouped struct {
-	GameID uuid.UUID `json:"game_id"`
-	CreatedAt time.Time `json:"created_at"`
-	Ranks []*RankingData `json:"ranks"`
+	GameID    uuid.UUID     `json:"game_id"`
+	CreatedAt time.Time     `json:"created_at"`
+	Ranks     []RankingData `json:"ranks"`
 }
 
 // RankingCron is a function that updates the ranking atomically
@@ -43,7 +43,7 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 		if err := api.db.NewRaw(
 			`SELECT g2u.game_id, g2u.username, g2u.rank, g.created_at 
 			FROM games_to_users as g2u JOIN games AS g ON g2u.game_id = g.id
-			WHERE g.created_at > (NOW() - INTERVAL '1 hour')
+			WHERE g.created_at > (NOW() - INTERVAL '6 hours')
 			ORDER BY g.created_at ASC`,
 		).Scan(ctx, &g2u); err != nil {
 			log.Printf("[WARN] Could not get games to users: %v\n", err)
@@ -51,7 +51,6 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 		}
 
 		log.Println("We have", len(g2u), "G2Us")
-
 
 		grouped := map[uuid.UUID]*RankingGrouped{}
 		ids := make([]uuid.UUID, 0)
@@ -61,15 +60,15 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 
 			if _, ok := grouped[game_id]; !ok {
 				grouped[game_id] = &RankingGrouped{
-					GameID: game_id,
+					GameID:    game_id,
 					CreatedAt: curr.CreatedAt,
-					Ranks: make([]*RankingData, 0),
+					Ranks:     make([]RankingData, 0),
 				}
 
 				ids = append(ids, game_id)
 			}
 
-			grouped[game_id].Ranks = append(grouped[game_id].Ranks, &curr)
+			grouped[game_id].Ranks = append(grouped[game_id].Ranks, curr)
 			ranking[curr.Username] = 0.0
 		}
 
@@ -78,7 +77,39 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 		// }
 
 		for _, id := range ids {
-			UpdateRatings(grouped[id].Ranks, ranking, 32)
+			newRank := UpdateRatings(grouped[id].Ranks, ranking, 0)
+
+			for username, rank := range newRank {
+				ranking[username] = rank
+			}
+
+			// log.Println(id)
+
+			// for username, rank := range ranking {
+			// 	log.Println(username, rank)
+			// }
+		}
+
+		// if err := api.db.NewRaw(
+		// 	`DELETE FROM rankings`,
+		// ).Scan(ctx, &g2u); err != nil {
+		// 	log.Printf("[ERROR] Could not reset ranking: %v\n", err)
+		// 	return err
+		// }
+
+		now := time.Now()
+
+		for username, rank := range ranking {
+			log.Println(username, rank)
+
+			if _, err := api.db.NewInsert().Model(&Ranking{
+				Username:  username,
+				Rank:      uint(math.Round(rank)),
+				CreatedAt: now,
+			}).Exec(ctx); err != nil {
+				log.Printf("[ERROR] Could not store ranking for %v and %f: %v\n", username, rank, err)
+				return err
+			}
 		}
 
 		return nil
@@ -89,7 +120,8 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 	return ranking, nil
 }
 
-/* Python code from the Latest!
+/*
+	Python code from the Latest!
 
 def calculate_expected_scores(ratings):
 total_rating = sum(ratings)
@@ -99,20 +131,24 @@ expected_score = 1 / (1 + math.pow(10, (total_rating - rating) / 400))
 expected_scores.append(expected_score)
 return expected_scores
 */
-func CalculateExpectedScore(datas []*RankingData, ranks map[string]float64) {
+func CalculateExpectedScore(datas []RankingData) map[string]float64 {
+	newRanks := map[string]float64{}
+
 	totalRating := 0.0
 	for _, r := range datas {
 		totalRating += float64(r.Rank)
 	}
 
 	for _, r := range datas {
-		expectedScore := 1 / (1 + math.Pow(10, (totalRating - float64(r.Rank)) / 400))
-		ranks[r.Username] = expectedScore
+		expectedScore := 1 / (1 + math.Pow(10, (totalRating-float64(r.Rank))/400))
+		newRanks[r.Username] = expectedScore
 	}
+
+	return newRanks
 }
 
-
-/* Python code from the Latest!
+/*
+	Python code from the Latest!
 
 def update_ratings(ratings, scores, k_factor=32):
 expected_scores = calculate_expected_scores(ratings)
@@ -122,19 +158,14 @@ new_rating = ratings[i] + k_factor * (scores[i] - expected_scores[i])
 new_ratings.append(new_rating)
 return new_ratings
 */
-func UpdateRatings(data []*RankingData, ranks map[string]float64, kFactor int) {
-	lastRanks := map[string]float64{}
-
-	for key, val := range ranks {
-		lastRanks[key] = val
-	}
-
-	CalculateExpectedScore(data, ranks)
-
-	// log.Println(ranks)
+func UpdateRatings(data []RankingData, ranks map[string]float64, kFactor int) map[string]float64 {
+	newRanks := map[string]float64{}
+	calcRanks := CalculateExpectedScore(data)
 
 	for _, r := range data {
-		newRating := float64(r.Rank) + float64(kFactor) * (lastRanks[r.Username] - ranks[r.Username])
-		ranks[r.Username] = newRating
+		newRating := float64(r.Rank) + float64(kFactor)*(ranks[r.Username]-calcRanks[r.Username])
+		newRanks[r.Username] = newRating
 	}
+
+	return newRanks
 }

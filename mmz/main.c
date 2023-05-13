@@ -24,7 +24,7 @@
 #endif
 
 #define MAX_ENTITIES 20000
-#define BASE_PLAYER_SPEED 20
+#define BASE_PLAYER_SPEED 30
 #define TICK_TIME 0.033f
 #define GAME_LENGTH 60 * 2
 #define MELEE_RANGE 2.f
@@ -67,11 +67,11 @@ typedef struct {
 } ranking_entry_t;
 
 cod_timing_t cod_timings[] = {
-    {.tick = 0, .radius = 500, .speed = 20},
-    {.tick = 800, .radius = 150, .speed = 5},
-    {.tick = 1200, .radius = 90, .speed = 3},
-    {.tick = 1500, .radius = 40, .speed = 3},
-    {.tick = 1700, .radius = 10, .speed = 2},
+    {.tick = 0, .radius = 500, .speed = 3},
+    {.tick = 800, .radius = 150, .speed = 2},
+    {.tick = 1200, .radius = 90, .speed = 2},
+    {.tick = 1500, .radius = 40, .speed = 2},
+    {.tick = 1700, .radius = 10, .speed = 1},
     {.tick = 1900, .radius = 0, .speed = 1},
     {.tick = -1, .radius = -1, .speed = -1},
 };
@@ -605,6 +605,12 @@ static int me_move(lua_State *L) {
   if (dir == NULL) {
     return 0;
   }
+  if (isnan(dir->x) || isnan(dir->y)) {
+    return 0;
+  }
+  if (isinf(dir->x) || isinf(dir->y)) {
+    return 0;
+  }
   me->gs->dir[eid].x = dir->x;
   me->gs->dir[eid].y = dir->y;
   return 0;
@@ -1046,6 +1052,7 @@ void run_match(int num_files, char **files) {
     u.deleted_at IS NULL\n\
     AND c.code IS NOT NULL\n\
     AND c.code != ''\n\
+    AND c.created_at > '2023-05-13 00:00'\n\
     ORDER BY\n\
     u.username,\n\
     c.created_at DESC;");
@@ -1106,7 +1113,7 @@ void run_match(int num_files, char **files) {
     if (i < gs.n_players) {
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
-                                 .health = 100,
+                                 .health = 30,
                                  // No skill used
                                  .used_skill = -1,
                                  // No default movement
@@ -1141,7 +1148,7 @@ void run_match(int num_files, char **files) {
   float curr_time = 0;
   printf("Starting match...\n");
 
-  vecf_t cod_center = {.x = 250, .y = 250};
+  vecf_t cod_center = (vecf_t){.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
   int current_cod = 0;
   int current_radius = cod_timings[current_cod].radius;
   int target_radius = cod_timings[current_cod].radius;
@@ -1226,13 +1233,14 @@ void run_match(int num_files, char **files) {
 
         switch (gs.players[i].used_skill) {
           case 0:  // SMALL PROJ
-            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir, i);
-            gs.players[i].cd[0] = 30;
+            create_entity(&gs, SMALL_PROJ, &gs.pos[i], &gs.players[i].skill_dir,
+                          i);
+            gs.players[i].cd[0] = 60;
             break;
           case 1:  // DASH
             gs.pos[i].x += gs.players[i].skill_dir.x * 10;
             gs.pos[i].y += gs.players[i].skill_dir.y * 10;
-            gs.players[i].cd[1] = 260;
+            gs.players[i].cd[1] = 200;
             break;
           case 2:  // MELEE
             for (int j = 0; j < gs.n_players; j++) {
@@ -1251,7 +1259,6 @@ void run_match(int num_files, char **files) {
         gs.players[i].cd[0] -= 1;
         gs.players[i].cd[1] -= 1;
         gs.players[i].cd[2] -= 1;
-
 
         if (gs.pos[i].x < 0) {
           gs.pos[i].x = 0;
@@ -1288,15 +1295,16 @@ void run_match(int num_files, char **files) {
     }
 
     for (int i = 0; i < gs.n_players; i++) {
-	for (int j = i + 1; j < gs.active_entities; j++) {
-	  if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ && gs.meta[j].owner != i) {
-	    if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
-		gs.players[i].health -= 10;
-		delete_entity(&gs, j);
-		j--;
-	    }
-	  }
-	}
+      for (int j = i + 1; j < gs.active_entities; j++) {
+        if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ &&
+            gs.meta[j].owner != i) {
+          if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
+            gs.players[i].health -= 10;
+            delete_entity(&gs, j);
+            j--;
+          }
+        }
+      }
     }
 
     update_traces(&gs);

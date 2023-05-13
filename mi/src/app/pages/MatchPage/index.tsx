@@ -54,6 +54,7 @@ const MatchPage = ({ matchId, carouselle }: Props) => {
     setState({
       match,
       currentPlayer,
+      followingPlayer: currentPlayer?.id,
       ...(carouselle ? { carouselle: true, state: "playing" } : {}),
     });
   }, [data?.match.map, gameData, userInfo, infoLoading]);

@@ -16,29 +16,18 @@ const RankingPage = () => {
       <S.Back onClick={() => window.history.back()}>
         <S.BackIcon size="large" />
       </S.Back>
-      <S.Heading>
-        Coming soon...
-      </S.Heading>
-    </S.Container>
-  )
-
-  return (
-    <S.Container>
-      <S.Back onClick={() => window.history.back()}>
-        <S.BackIcon size="large" />
-      </S.Back>
       <S.List>
         <thead>
           <tr>
-            <th>#</th>
-            <th>user</th>
+            <th>ELO</th>
+            <th>Userillo</th>
           </tr>
         </thead>
         <tbody>
-          {ranking.map(({ id, username }, i) => {
+          {ranking.map(({ username, rank }) => {
             return (
-              <S.Match key={id}>
-                <td>{i + 1}</td>
+              <S.Match key={username}>
+                <td>{rank}</td>
                 <td>{username}</td>
               </S.Match>
             );
