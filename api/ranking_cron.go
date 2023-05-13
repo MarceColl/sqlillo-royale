@@ -90,6 +90,10 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 			// }
 		}
 
+		for username, rank := range ranking {
+			log.Println(username, rank)
+		}
+
 		return nil
 	}); err != nil {
 		return nil, err
