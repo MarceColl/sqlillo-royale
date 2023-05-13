@@ -43,7 +43,7 @@ func (api *Api) RankingCron() (map[string]float64, error) {
 		if err := api.db.NewRaw(
 			`SELECT g2u.game_id, g2u.username, g2u.rank, g.created_at 
 			FROM games_to_users as g2u JOIN games AS g ON g2u.game_id = g.id
-			WHERE g.created_at > (NOW() - INTERVAL '6 hours')
+			WHERE g.created_at > (NOW() - INTERVAL '30 minutes')
 			ORDER BY g.created_at ASC`,
 		).Scan(ctx, &g2u); err != nil {
 			log.Printf("[WARN] Could not get games to users: %v\n", err)
