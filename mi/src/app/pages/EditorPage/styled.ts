@@ -6,6 +6,7 @@ export const Container = styled.div`
   flex: 1;
   display: flex;
   height: 100%;
+  overflow-x: hidden;
 `;
 
 export const EditorContainer = styled.div<{ $right: boolean }>`
@@ -22,6 +23,8 @@ export const EditorContainer = styled.div<{ $right: boolean }>`
 export const DocsContainer = styled.div`
   flex: 1;
   min-width: 100px;
+  overflow: auto;
+  height: 100%;
 `;
 
 export const WithMargin = styled.div`
