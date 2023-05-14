@@ -7,10 +7,15 @@ export type Settings = {
 export enum EntityKind {
   PLAYER = 0,
   BULLET = 1,
-  OBSTACLE = 2,
   COD = "cod",
+  OBSTACLE = 4,
 }
-
+/*
+TODOD skills
+0 projec
+1 dash
+2 melee
+*/
 export type BaseEntity = {
   id: number;
   pos: vec2;
@@ -31,12 +36,16 @@ export type COD = BaseEntity & {
   kind: EntityKind.COD;
   radius: number;
 };
+export type Obstacle = BaseEntity & {
+  kind: EntityKind.OBSTACLE;
+};
 
-export type Entity = Player | Bullet | COD;
+export type Entity = Obstacle | Player | Bullet | COD;
 
 export type GameState = {
   players: Player[];
   bullets: Bullet[];
+  obstacles: Obstacle[];
   cod: COD | null;
 };
 

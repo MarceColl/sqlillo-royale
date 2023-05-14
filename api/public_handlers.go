@@ -8,12 +8,23 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"github.com/uptrace/bun"
 )
 
 func (api *Api) PublicGamesHandler(c *fiber.Ctx) error {
 	var games []*Game = []*Game{}
 
-	if err := api.db.NewSelect().Model(&games).Column("id", "config", "outcome", "created_at", "updated_at").OrderExpr("created_at DESC").Scan(c.Context()); err != nil {
+	q := api.db.NewSelect().Model(&games).Column("id", "config", "outcome", "created_at", "updated_at").OrderExpr("created_at DESC")
+
+	if round := c.Query("round"); round != "" {
+		q = q.Where("round = ?", round)
+
+		log.Println("games round", round)
+	} else {
+		q = q.Where("round IS NULL")
+	}
+
+	if err := q.Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not list games: %v\n", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
@@ -131,12 +142,19 @@ func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
 
 func (api *Api) PublicRankingHandler(c *fiber.Ctx) error {
 	var ranking []*Ranking = []*Ranking{}
-
 	var lastCreatedAt time.Time
 
-	if err := api.db.NewRaw(
-		"SELECT max(created_at) FROM rankings",
-	).Scan(c.Context(), &lastCreatedAt); err != nil {
+	q := api.db.NewSelect().Model(&lastCreatedAt).ColumnExpr("max(?)", bun.Ident("created_at")).Table("rankings")
+
+	if round := c.Query("round"); round != "" {
+		q = q.Where("round = ?", round)
+
+		log.Println("ranking round", round)
+	} else {
+		q = q.Where("round IS NULL")
+	}
+
+	if err := q.Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not get last ranking created_at: %v\n", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}

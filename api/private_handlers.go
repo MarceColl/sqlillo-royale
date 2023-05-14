@@ -14,7 +14,7 @@ func (*Api) PrivateUserHandler(c *fiber.Ctx, user User) error {
 func (api *Api) PrivateCodeHandler(c *fiber.Ctx, user User) error {
 	var codes []*Code = []*Code{}
 
-	if err := api.db.NewSelect().Model(&codes).Where("username = ?", user.Username).Scan(c.Context()); err != nil {
+	if err := api.db.NewSelect().Model(&codes).Where("username = ?", user.Username).Order("created_at DESC").Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not list codes of user %s: %v\n", user.Username, err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}

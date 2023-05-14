@@ -116,9 +116,11 @@ typedef struct {
 typedef struct {
   int id;
   char *username;
+  char *killed_by;
   player_code_t code;
   float cd[NUM_SKILLS];
   int64_t health;
+  int8_t last_used_skill;
   int8_t used_skill;
   vecf_t skill_dir;
   int targeted_player;  // If -1 no target, else player entity id
@@ -587,6 +589,12 @@ static int me_pos(lua_State *L) {
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
+
+  if (me == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   vec->x = me->gs->pos[me->p->id].x;
   vec->y = me->gs->pos[me->p->id].y;
   return 1;
@@ -667,7 +675,7 @@ static int me_cast(lua_State *L) {
   }
 
   if (me->p->cd[skill] <= 0) {
-    printf("CAST\n");
+    me->p->last_used_skill = -1;
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
     me->p->skill_dir.y = dir->y;
@@ -819,6 +827,7 @@ void *player_thread(void *data) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
     ptd->dead = true;
     this_player->health = 0;
+    this_player->killed_by = "not knowing how to code";
     return NULL;
   }
 
@@ -905,17 +914,21 @@ void update_traces(gamestate_t *gs) {
   for (int i = 0; i < gs->active_entities; i++) {
     yyjson_mut_val *key_id = yyjson_mut_str(gs->traces, "id");
     yyjson_mut_val *key_username = yyjson_mut_str(gs->traces, "username");
+    yyjson_mut_val *key_killed_by = yyjson_mut_str(gs->traces, "killed_by");
     yyjson_mut_val *key_x = yyjson_mut_str(gs->traces, "x");
     yyjson_mut_val *key_y = yyjson_mut_str(gs->traces, "y");
     yyjson_mut_val *key_tick = yyjson_mut_str(gs->traces, "t");
     yyjson_mut_val *key_health = yyjson_mut_str(gs->traces, "h");
     yyjson_mut_val *key_type = yyjson_mut_str(gs->traces, "ty");
+    yyjson_mut_val *key_used_skill = yyjson_mut_str(gs->traces, "us");
 
     yyjson_mut_val *str_username = yyjson_mut_null(gs->traces);
+    yyjson_mut_val *str_killed_by = yyjson_mut_null(gs->traces);
 
     // Only set the username when it is a player
     if (gs->meta[i].type == PLAYER) {
       str_username = yyjson_mut_str(gs->traces, gs->players[i].username);
+      str_killed_by = yyjson_mut_str(gs->traces, gs->players[i].killed_by);
     }
 
     yyjson_mut_val *num_id = yyjson_mut_int(gs->traces, i);
@@ -925,16 +938,20 @@ void update_traces(gamestate_t *gs) {
     yyjson_mut_val *num_health =
         yyjson_mut_int(gs->traces, gs->players[i].health);
     yyjson_mut_val *num_type = yyjson_mut_int(gs->traces, gs->meta[i].type);
+    yyjson_mut_val *num_u_skill =
+        yyjson_mut_int(gs->traces, gs->players[i].last_used_skill);
 
     yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
 
     yyjson_mut_obj_add(item, key_id, num_id);
     yyjson_mut_obj_add(item, key_username, str_username);
+    yyjson_mut_obj_add(item, key_killed_by, str_killed_by);
     yyjson_mut_obj_add(item, key_x, num_x);
     yyjson_mut_obj_add(item, key_y, num_y);
     yyjson_mut_obj_add(item, key_tick, num_tick);
     yyjson_mut_obj_add(item, key_health, num_health);
     yyjson_mut_obj_add(item, key_type, num_type);
+    yyjson_mut_obj_add(item, key_used_skill, num_u_skill);
 
     yyjson_mut_arr_append(gs->traces_arr, item);
   }
@@ -1014,7 +1031,8 @@ void pg_error_exit(PGconn *conn, int code) {
 void pg_result_error_handler(PGresult *res) {
   int status = PQresultStatus(res);
   if (status != PGRES_TUPLES_OK) {
-    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
+    printf("[Postgres Result ERROR] (%d) %s\n", status,
+           PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
@@ -1023,24 +1041,28 @@ void pg_result_error_handler(PGresult *res) {
 void pg_command_error_handler(PGresult *res) {
   int status = PQresultStatus(res);
   if (status != PGRES_COMMAND_OK) {
-    printf("[ERROR] (%d) %s\n", status, PQresultErrorMessage(res));
+    printf("[Postgres Command ERROR] (%d) %s\n", status,
+           PQresultErrorMessage(res));
     PQclear(res);
     pg_error_exit(conn, 1);
   }
 }
 
-void run_match(int num_files, char **files) {
+void run_match(int num_files, char **files, char *roundillo) {
   srand(time(NULL));
 
   pthread_mutex_init(&inc_tick_cond_mut, NULL);
   pthread_mutex_init(&done_cond_mut, NULL);
   pthread_cond_init(&inc_tick_cond_var, NULL);
   pthread_cond_init(&done_cond_var, NULL);
-  printf("Initialized base condition vars\n");
+  printf("[DEBUG] Initialized base condition vars\n");
 
   int rows, n_players;
   PGresult *res;
+
   if (!files) {
+    printf("[DEBUG] Querying from DB...\n");
+
     res = PQexec(conn,
                  "SELECT\n\
     DISTINCT ON (u.username)\n\
@@ -1063,15 +1085,16 @@ void run_match(int num_files, char **files) {
     rows = PQntuples(res);
 
     if (rows == 0) {
-      printf("No codes in DB\n");
+      printf("[DEBUG] No codes in DB\n");
       return;
     }
 
     n_players = rows;
 
-    printf("Got %d codes from DB\n", rows);
+    printf("[DEBUG] Got %d codes from DB\n", rows);
   } else {
     n_players = num_files;
+    printf("[DEBUG] Using %d files\n", n_players);
   }
 
   gamestate_t gs = {
@@ -1103,7 +1126,7 @@ void run_match(int num_files, char **files) {
       sizeof(player_thread_data_t) * gs.n_players);
   init_traces(&gs);
 
-  printf("Setup thread data for %d\n", gs.n_players);
+  printf("[DEBUG] Setup thread data for %d\n", gs.n_players);
 
   fid_current = gs.n_players;
 
@@ -1114,9 +1137,11 @@ void run_match(int num_files, char **files) {
     if (i < gs.n_players) {
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
+                                 .killed_by = NULL,
                                  .health = 30,
                                  // No skill used
                                  .used_skill = -1,
+                                 .last_used_skill = -1,
                                  // No default movement
                                  .movement = {.type = MT_NONE},
                                  // No target
@@ -1139,15 +1164,15 @@ void run_match(int num_files, char **files) {
 
       pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
 
-      printf("Player #%d is %s\n", i, gs.players[i].username);
+      printf("[DEBUG] Player #%d is %s\n", i, gs.players[i].username);
     }
   }
 
-  printf("Setup %d players structures with %d max entities\n", gs.n_players,
-         MAX_ENTITIES);
+  printf("[DEBUG] Setup %d players structures with %d max entities\n",
+         gs.n_players, MAX_ENTITIES);
 
   float curr_time = 0;
-  printf("Starting match...\n");
+  printf("[DEBUG] Starting match...\n");
 
   vecf_t cod_center = (vecf_t){.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
   int current_cod = 0;
@@ -1173,8 +1198,8 @@ void run_match(int num_files, char **files) {
       gs.cod.x = cod_center.x;
       gs.cod.y = cod_center.y;
       target_radius = timing->radius;
-      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y,
-             timing->radius);
+      printf("[DEBUG] NEW COD %d (%f, %f) %d\n", tick, cod_center.x,
+             cod_center.y, timing->radius);
     }
 
     if (current_radius > target_radius) {
@@ -1252,10 +1277,15 @@ void run_match(int num_files, char **files) {
                 continue;
               }
               gs.players[j].health -= MELEE_DAMAGE;
+
+              if (gs.players[j].health <= 0) {
+                gs.players[j].killed_by = gs.players[i].username;
+              }
             }
             gs.players[i].cd[2] = MELEE_COOLDOWN;
             break;
         }
+        gs.players[i].last_used_skill = gs.players[i].used_skill;
         gs.players[i].used_skill = -1;
         gs.players[i].cd[0] -= 1;
         gs.players[i].cd[1] -= 1;
@@ -1303,6 +1333,12 @@ void run_match(int num_files, char **files) {
             gs.meta[j].owner != i) {
           if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
             gs.players[i].health -= 10;
+
+            // blu blu blu blu
+            if (gs.players[i].health <= 0) {
+              gs.players[i].killed_by = gs.players[gs.meta[j].owner].username;
+            }
+
             delete_entity(&gs, j);
             j--;
           }
@@ -1350,7 +1386,7 @@ void run_match(int num_files, char **files) {
 
 #if SAVE_TRACES
   save_traces(&gs);
-  printf("Traces saved on disk!\n");
+  printf("[DEBUG] Traces saved on disk!\n");
 #endif
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
@@ -1371,14 +1407,14 @@ void run_match(int num_files, char **files) {
   yyjson_val *config_val = yyjson_obj_get(root, "map");
   const char *config_str = yyjson_val_write(config_val, 0, NULL);
 
-  const char *param_game[3] = {traces_str, config_str, "[]"};
+  const char *param_game[4] = {traces_str, config_str, "[]", roundillo};
 
   if (!files) {
-    PGresult *res_ins =
-        PQexecParams(conn,
-                     "INSERT INTO games (id, data, config, outcome) VALUES "
-                     "(uuid_generate_v4(), $1, $2, $3) RETURNING id",
-                     3, NULL, param_game, NULL, NULL, 0);
+    PGresult *res_ins = PQexecParams(
+        conn,
+        "INSERT INTO games (id, data, config, outcome, round) VALUES "
+        "(uuid_generate_v4(), $1, $2, $3, $4) RETURNING id",
+        4, NULL, param_game, NULL, NULL, 0);
 
     pg_result_error_handler(res_ins);
     int i_rows = PQntuples(res_ins);
@@ -1392,7 +1428,7 @@ void run_match(int num_files, char **files) {
     }
 
     const char *game_uuid = PQgetvalue(res_ins, 0, 0);
-    printf("Game id is %s\n", game_uuid);
+    printf("[DEBUG] Game id is %s\n", game_uuid);
 
     for (int i = 0; i < gs.n_players; i++) {
       pthread_cancel(gs.threads[i]);
@@ -1411,7 +1447,7 @@ void run_match(int num_files, char **files) {
       pg_command_error_handler(res_ins_2);
       PQclear(res_ins_2);
 
-      printf("Player #%d with %s connection created!\n", i,
+      printf("[DEBUG] Player #%d with %s connection created!\n", i,
              gs.players[i].username);
     }
 
@@ -1433,40 +1469,60 @@ int main(int argc, char **argv) {
   printf(" |_| |_| |_|_|_| |_| |_|_/___|\\__,_|\n");
   printf("                                    \n");
 
+  char *roundillo = NULL;
   char **files = NULL;
-  if (argc > 1) {
-    files = (char **)malloc(sizeof(char **) * (argc - 1));
-    for (int i = 1; i < argc; i++) {
-      printf("Using file %s\n", argv[i]);
 
-      FILE *fd = fopen(argv[i], "r");
-      fseek(fd, 0, SEEK_END);
-      size_t size = ftell(fd);
-      fseek(fd, 0, SEEK_SET);
-      char *buffer = (char *)malloc(size + 1);
-      buffer[size] = '\0';
-      fread(buffer, size, 1, fd);
-      files[i - 1] = buffer;
+  bool is_files = false;
+
+  if (argc > 1) {
+    if (strncmp(argv[1], "-r", 2) == 0) {
+      if (argc < 3) {
+        printf("[ERROR] Invalid number of args for round method\n");
+        return 1;
+      }
+
+      printf("[DEBUG] Using round mode: %s\n", argv[2]);
+      roundillo = argv[2];
+    } else {
+      files = (char **)malloc(sizeof(char **) * (argc - 1));
+
+      for (int i = 1; i < argc; i++) {
+        printf("[DEBUG] Using file %s\n", argv[i]);
+
+        FILE *fd = fopen(argv[i], "r");
+        fseek(fd, 0, SEEK_END);
+        size_t size = ftell(fd);
+        fseek(fd, 0, SEEK_SET);
+        char *buffer = (char *)malloc(size + 1);
+        buffer[size] = '\0';
+        fread(buffer, size, 1, fd);
+        files[i - 1] = buffer;
+      }
+
+      is_files = true;
     }
-  } else {
+  }
+
+  if (!is_files) {
     conn =
         PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
 
     if (PQstatus(conn) == CONNECTION_BAD) {
-      printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+      printf("[ERROR] Connection to database failed: %s\n",
+             PQerrorMessage(conn));
 
       PQfinish(conn);
       exit(1);
     }
   }
 
-  printf("Start match...\n");
+  printf("[DEBUG] Start match...\n");
 
   /* while (true) { */
-  run_match(argc - 1, files);
+  run_match(argc - 1, files, roundillo);
   /* } */
 
-  printf("Exiting...\n");
+  printf("[DEBUG] Exiting...\n");
 
   PQfinish(conn);
   return 0;

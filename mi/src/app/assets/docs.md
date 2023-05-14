@@ -34,8 +34,8 @@ move or cast a skill. The available functions are
 * `me:cod()` returns an object with 3 methods, `x()`, `y()` and `radius()`. If `x()` is `-1` there is no COD yet.
 * `me:cooldown(s)` returns the amount of ticks left for the given skill (uses the same numbers as `cast`). 
 * `me:cast(s, v)` casts a skill spell `s` in the `v` direction. 
-	`s` can be 0 - small projectile, damage is 10, cooldown is 1.
-	         1 - dash in the given direction
+	`s` can be 0 - small projectile, damage is 10, cooldown is 60.
+	         1 - dash in the given direction with cooldown is 200.
 			 2 - melee attack, distance is 2, damage 20 and cooldown 50.
 
 The `visible()` call returns an `entity` type which has the following methods
