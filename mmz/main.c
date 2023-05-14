@@ -733,18 +733,39 @@ static const struct luaL_Reg melib_f[] = {{NULL, NULL}};
 
 static int cod_x(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
+
+  if (cod == NULL) {
+    printf("[WARN] Invalid call to `x` for cod\n");
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushnumber(L, cod->x);
   return 1;
 }
 
 static int cod_y(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
+
+  if (cod == NULL) {
+    printf("[WARN] Invalid call to `x` for cod\n");
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushnumber(L, cod->y);
   return 1;
 }
 
 static int cod_radius(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
+
+  if (cod == NULL) {
+    printf("[WARN] Invalid call to `x` for cod\n");
+    lua_pushnil(L);
+    return 1;
+  }
+
   lua_pushnumber(L, cod->radius);
   return 1;
 }
@@ -1321,15 +1342,14 @@ void run_match(int num_files, char **files, char *roundillo) {
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
           delete_entity(&gs, i);
-	  i--;
+          i--;
         }
       }
     }
 
     for (int i = 0; i < gs.n_players; i++) {
       for (int j = i + 1; j < gs.active_entities; j++) {
-        if (!gs.players[i].dead &&
-	    gs.meta[j].type == SMALL_PROJ &&
+        if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ &&
             gs.meta[j].owner != i) {
           if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
             gs.players[i].health -= 10;
@@ -1525,5 +1545,3 @@ int main(int argc, char **argv) {
   printf("[DEBUG] Exiting...\n");
 
   PQfinish(conn);
-  return 0;
-}
