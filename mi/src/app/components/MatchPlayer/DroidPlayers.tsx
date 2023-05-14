@@ -11,16 +11,17 @@ const tempMelee = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
 const markerPos = new THREE.Vector3();
+const hidePos = new THREE.Vector3(0, 5000, 0);
 const markerOffset = new THREE.Vector3(0, 70, 0);
 const meleeOffset = new THREE.Vector3(0, 2, 0);
 
-const geom = new THREE.CylinderGeometry(10, 10, 2, 32);
+const geom = new THREE.TorusGeometry(10, 1.5, 16, 32);
 const meleeMat = new THREE.MeshPhongMaterial({
   color: 0x1122ff,
   emissive: 0x1122ff,
   emissiveIntensity: 0.5,
   transparent: true,
-  opacity: 0.5,
+  opacity: 0.4,
 });
 
 const playersSizeSelector = (state: MatchStore) =>
@@ -68,11 +69,16 @@ const DroidPlayers = () => {
           marker.current?.position.set(0, 5000, 0);
         }
         if (player.usedSkill === Skill.MELEE) {
+          tempMelee.rotation.set(Math.PI / 2, 0, 0);
           tempMelee.position.copy(tempPlayers.position).add(meleeOffset);
-          melee.current?.setMatrixAt(i, tempPlayers.matrix);
+          tempMelee.updateMatrix();
+          melee.current?.setMatrixAt(i, tempMelee.matrix);
           melee.current!.instanceMatrix.needsUpdate = true;
         } else {
           tempMelee.position.set(0, 5000, 0);
+          tempMelee.updateMatrix();
+
+          melee.current?.setMatrixAt(i, tempMelee.matrix);
           melee.current!.instanceMatrix.needsUpdate = true;
         }
       }
