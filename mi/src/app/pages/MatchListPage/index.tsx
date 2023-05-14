@@ -8,7 +8,7 @@ import { Anchor } from "@/app/ui";
 import { useState } from "react";
 
 const MatchListPage = () => {
-  const showFirstTab = localStorage.getItem("firstTabEnabled");
+  const showFirstTab = true;
   const showSecondTab = localStorage.getItem("secondTabEnabled");
   const showThirdTab = localStorage.getItem("thirdTabEnabled");
   const showAnyTab = showFirstTab || showSecondTab || showThirdTab;

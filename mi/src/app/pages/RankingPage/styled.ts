@@ -1,6 +1,6 @@
 import { Heading as RawHeading } from "@/app/ui";
 import { FormPreviousLink } from "grommet-icons";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 export const Heading = styled(RawHeading)`
   z-index: 10;
@@ -18,10 +18,8 @@ export const Container = styled.div`
 `;
 
 export const List = styled.table`
-  margin: 1rem;
-  width: 300px;
-  max-width: 90vw;
-  margin: auto;
+  margin-top: 4rem;
+  width: 100%;
 `;
 export const Match = styled.tr`
   text-align: center;
@@ -46,3 +44,23 @@ export const Back = styled.div`
 `;
 
 export const BackIcon = styled(FormPreviousLink)``;
+
+export const TabContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+`;
+export const Tab = styled.div<{ $active: boolean }>`
+  padding: 1rem;
+  cursor: pointer;
+  ${({ $active }) =>
+    $active &&
+    css`
+      border-bottom: 2px solid white;
+    `}
+`;
+
+export const Content = styled.div`
+  max-width: 90vw;
+  margin: auto;
+`;
