@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"time"
@@ -16,7 +17,7 @@ import (
 // updates the ranking
 func (api *Api) SetupRankingCron() {
 	for range time.Tick(time.Minute) {
-		go api.RankingCron()
+		go api.RankingCron(nil)
 	}
 }
 
@@ -34,17 +35,25 @@ type RankingGrouped struct {
 }
 
 // RankingCron is a function that updates the ranking atomically
-func (api *Api) RankingCron() (map[string]float64, error) {
+func (api *Api) RankingCron(round *string) (map[string]float64, error) {
 	ranking := map[string]float64{}
 
 	if err := api.db.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		var g2u []RankingData
 
+		s := "g.created_at > (NOW() - INTERVAL '30 minutes')"
+
+		if round != nil {
+			s = fmt.Sprintf("g.round = '%s'", *round)
+		}
+
 		if err := api.db.NewRaw(
-			`SELECT g2u.game_id, g2u.username, g2u.rank, g.created_at 
-			FROM games_to_users as g2u JOIN games AS g ON g2u.game_id = g.id
-			WHERE g.created_at > (NOW() - INTERVAL '30 minutes')
-			ORDER BY g.created_at ASC`,
+			fmt.Sprintf(
+				`SELECT g2u.game_id, g2u.username, g2u.rank, g.created_at 
+				FROM games_to_users as g2u JOIN games AS g ON g2u.game_id = g.id
+				WHERE %s ORDER BY g.created_at ASC`,
+				s,
+			),
 		).Scan(ctx, &g2u); err != nil {
 			log.Printf("[WARN] Could not get games to users: %v\n", err)
 			return err

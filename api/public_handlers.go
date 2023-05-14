@@ -131,8 +131,16 @@ func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	if ranking, err := api.RankingCron(); err != nil {
-		log.Printf("[ERROR] Could not update ranking: %v\n", err)
+	var roundillo *string = nil
+
+	if round := c.Query("round"); round != "" {
+		roundillo = &round
+
+		log.Println("ranking round compute", *roundillo)
+	}
+
+	if ranking, err := api.RankingCron(roundillo); err != nil {
+		log.Printf("[ERROR] Could not update ranking for %v: %v\n", roundillo, err)
 
 		return c.SendStatus(fiber.StatusInternalServerError)
 	} else {
