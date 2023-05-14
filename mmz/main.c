@@ -1223,7 +1223,7 @@ void run_match(int num_files, char **files, char *roundillo) {
   int current_ranking = 0;
   int current_ranking_tick = tick;
 
-  while (alive_players > 1) {
+  while (alive_players > 0) {
     pthread_mutex_lock(&inc_tick_cond_mut);
     tick += 1;
 
