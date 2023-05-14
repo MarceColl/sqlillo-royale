@@ -139,12 +139,12 @@ func (api *Api) PublicUpdateRankingHandler(c *fiber.Ctx) error {
 		log.Println("ranking round compute", *roundillo)
 	}
 
-	if ranking, err := api.RankingCron(roundillo); err != nil {
+	if _, err := api.RankingCron(roundillo); err != nil {
 		log.Printf("[ERROR] Could not update ranking for %v: %v\n", roundillo, err)
 
 		return c.SendStatus(fiber.StatusInternalServerError)
 	} else {
-		return c.JSON(ranking)
+		return c.SendStatus(fiber.StatusCreated)
 	}
 }
 
