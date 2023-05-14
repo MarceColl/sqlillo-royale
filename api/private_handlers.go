@@ -27,6 +27,8 @@ func (api *Api) PrivateCreateCodeHandler(c *fiber.Ctx, user User) error {
 		Code string `json:"code"`
 	}
 
+	return c.SendStatus(fiber.StatusNotImplemented)
+
 	if err := json.Unmarshal(c.Body(), &codeBody); err != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
