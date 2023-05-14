@@ -115,6 +115,7 @@ func (api *Api) RankingCron(round *string) (map[string]float64, error) {
 				Username:  username,
 				Rank:      uint(math.Round(rank)),
 				CreatedAt: now,
+				Round:     round,
 			}).Exec(ctx); err != nil {
 				log.Printf("[ERROR] Could not store ranking for %v and %f: %v\n", username, rank, err)
 				return err
