@@ -735,7 +735,7 @@ static int cod_x(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
 
   if (cod == NULL) {
-    printf("[WARN] Invalid call to `x` for cod\n");
+    printf("[WARN] Invalid call to `x` for cod (YOU ARE DUMB)\n");
     lua_pushnil(L);
     return 1;
   }
@@ -748,7 +748,7 @@ static int cod_y(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
 
   if (cod == NULL) {
-    printf("[WARN] Invalid call to `x` for cod\n");
+    printf("[WARN] Invalid call to `y` for cod (YOU ARE DUMB)\n");
     lua_pushnil(L);
     return 1;
   }
@@ -761,7 +761,7 @@ static int cod_radius(lua_State *L) {
   cod_t *cod = (cod_t *)lua_touserdata(L, 1);
 
   if (cod == NULL) {
-    printf("[WARN] Invalid call to `x` for cod\n");
+    printf("[WARN] Invalid call to `radius` for cod (YOU ARE DUMB)\n");
     lua_pushnil(L);
     return 1;
   }
