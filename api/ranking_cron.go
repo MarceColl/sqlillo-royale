@@ -21,6 +21,11 @@ func (api *Api) SetupRankingCron() {
 	}
 }
 
+type NewRankingData struct {
+	Username string `json:"username"`
+	Rank     int    `json:"rank"`
+}
+
 type RankingData struct {
 	GameID    uuid.UUID `json:"game_id"`
 	Username  string    `json:"username"`
@@ -34,8 +39,68 @@ type RankingGrouped struct {
 	Ranks     []RankingData `json:"ranks"`
 }
 
+func (api *Api) RankingCron(round *string) (bool, error) {
+	if err := api.db.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		var xd []NewRankingData
+
+		s := "g.created_at > (NOW() - INTERVAL '120 minutes')"
+
+		if round != nil {
+			s = fmt.Sprintf("g.round = '%s'", *round)
+		}
+
+		if err := api.db.NewRaw(
+			fmt.Sprintf(
+				`WITH max_pollas AS (
+					SELECT game_id, MAX(rank) AS m 
+					FROM games_to_users gtp 
+					JOIN games g 
+					ON (g.id = gtp.game_id) 
+					WHERE %s
+					GROUP BY game_id
+				) 
+				SELECT 
+					username,
+					((SUM(rank) / NULLIF(AVG(mp.m), 0)) * 100) :: bigint as rank
+				FROM games_to_users gtu 
+				JOIN max_pollas mp 
+				ON (
+					mp.game_id = gtu.game_id
+				) 
+				GROUP BY username 
+				ORDER BY 2 DESC`,
+				s,
+			),
+		).Scan(ctx, &xd); err != nil {
+			log.Printf("[WARN] Could not get pollas: %v\n", err)
+			return err
+		}
+
+		now := time.Now()
+
+		for _, wow := range xd {
+			if _, err := api.db.NewInsert().Model(&Ranking{
+				Username:  wow.Username,
+				Rank:      uint(wow.Rank),
+				CreatedAt: now,
+				Round:     round,
+			}).Exec(ctx); err != nil {
+				log.Printf("[ERROR] Could not store new ranking: %v\n", err)
+
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // RankingCron is a function that updates the ranking atomically
-func (api *Api) RankingCron(round *string) (map[string]float64, error) {
+func (api *Api) RankingCronOld(round *string) (map[string]float64, error) {
 	ranking := map[string]float64{}
 
 	if err := api.db.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
