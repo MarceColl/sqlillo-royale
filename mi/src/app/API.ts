@@ -128,13 +128,13 @@ export const getLastCode = async (): Promise<GetLastCodeOutput | null> => {
 type GetAllCodesOutput = {
   codes: GetLastCodeOutput[];
 };
-export const getAllCodes = async(): Promise<GetAllCodesOutput> => {
+export const getAllCodes = async (): Promise<GetAllCodesOutput> => {
   const resp = await fetch(`${API_URL}/api/private/codes`, {
-    method: 'GET',
+    method: "GET",
     headers: {
       // NOTE(taras)
       // Maybe getting from local storage is not the best idea
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
 
@@ -156,11 +156,17 @@ export const getCarouselle = async (): Promise<Match> => {
   return (await resp.json()) as Match;
 };
 
+type GetMatchListInput = {
+  type?: 1 | 2 | 3;
+};
 type GetMatchListOutput = {
   matchList: Match[];
 };
-export const getMatchList = async (): Promise<GetMatchListOutput> => {
-  const resp = await fetch(`${API_URL}/api/private/games`, {
+export const getMatchList = async ({
+  type,
+}: GetMatchListInput): Promise<GetMatchListOutput> => {
+  const params = type ? `?round=${type}` : "";
+  const resp = await fetch(`${API_URL}/api/private/games${params}`, {
     method: "GET",
     headers: {
       // NOTE(taras)
@@ -182,16 +188,16 @@ export const getMatchList = async (): Promise<GetMatchListOutput> => {
 };
 
 type GetRankingOutput = {
-  ranking: {username: string; rank: number;}[];
+  ranking: { username: string; rank: number }[];
 };
-export const getRanking = async(): Promise<GetRankingOutput> => {
+export const getRanking = async (): Promise<GetRankingOutput> => {
   const resp = await fetch(`${API_URL}/api/ranking`, {
-    method: 'GET',
+    method: "GET",
   });
 
   const ranking = await resp.json();
 
-  return {ranking: ranking as GetRankingOutput['ranking']};
+  return { ranking: ranking as GetRankingOutput["ranking"] };
 };
 
 type GetMatchInput = {

@@ -10,7 +10,12 @@ export enum EntityKind {
   COD = "cod",
   OBSTACLE = 4,
 }
-
+/*
+TODOD skills
+0 projec
+1 dash
+2 melee
+*/
 export type BaseEntity = {
   id: number;
   pos: vec2;
