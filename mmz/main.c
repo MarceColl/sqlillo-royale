@@ -1291,13 +1291,15 @@ void run_match(int num_files, char **files) {
         if (gs.pos[i].x < 0 || gs.pos[i].x > gs.w || gs.pos[i].y < 0 ||
             gs.pos[i].y > gs.h) {
           delete_entity(&gs, i);
+	  i--;
         }
       }
     }
 
     for (int i = 0; i < gs.n_players; i++) {
       for (int j = i + 1; j < gs.active_entities; j++) {
-        if (!gs.players[i].dead && gs.meta[j].type == SMALL_PROJ &&
+        if (!gs.players[i].dead &&
+	    gs.meta[j].type == SMALL_PROJ &&
             gs.meta[j].owner != i) {
           if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
             gs.players[i].health -= 10;
