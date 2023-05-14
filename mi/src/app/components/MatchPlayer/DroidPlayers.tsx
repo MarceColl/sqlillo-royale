@@ -8,13 +8,23 @@ import { Skill } from "./types";
 
 const tempPlayers = new THREE.Object3D();
 const tempMelee = new THREE.Object3D();
+const tempLife = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
 const markerPos = new THREE.Vector3();
 const hidePos = new THREE.Vector3(0, 5000, 0);
 const markerOffset = new THREE.Vector3(0, 70, 0);
 const meleeOffset = new THREE.Vector3(0, 2, 0);
+const lifeOffset = new THREE.Vector3(0, -10, 0);
+const tempLifeColor = new THREE.Color();
+const black = new THREE.Color("black");
 
+const lifeGeom = new THREE.CylinderGeometry(5, 1, 16, 32);
+const lifeMat = new THREE.MeshPhongMaterial({
+  color: 0x888888,
+  transparent: true,
+  opacity: 0.4,
+});
 const geom = new THREE.TorusGeometry(10, 1.5, 16, 32);
 const meleeMat = new THREE.MeshPhongMaterial({
   color: 0x1122ff,
@@ -30,6 +40,7 @@ const playersSizeSelector = (state: MatchStore) =>
 const DroidPlayers = () => {
   const { nodes, materials } = useGLTF(droidUrl) as any;
   const melee = useRef<THREE.InstancedMesh>(null);
+  const life = useRef<THREE.InstancedMesh>(null);
   const marker = useRef<THREE.Mesh>(null);
   const mesh6 = useRef<THREE.InstancedMesh>(null);
   const mesh5 = useRef<THREE.InstancedMesh>(null);
@@ -53,6 +64,13 @@ const DroidPlayers = () => {
       if (!isAlive) {
         tempPlayers.position.set(0, match.map.size[0] * 3, 0);
         tempPlayers.updateMatrix();
+        tempLife.position.set(0, 5000, 0);
+        tempLife.updateMatrix();
+        life.current!.setMatrixAt(i, tempLife.matrix);
+        life.current!.setColorAt(i, black);
+        life.current!.instanceColor!.needsUpdate = true;
+        tempMelee.position.set(0, 5000, 0);
+        tempMelee.updateMatrix();
       } else {
         const [x, y] = player.pos;
         tempPlayers.position.set(x, 0, y);
@@ -62,6 +80,18 @@ const DroidPlayers = () => {
         const color = match.players[player.id].color || [1, 1, 1];
         tempColor.setRGB(...color);
         tempPlayers.updateMatrix();
+        tempLife.position.copy(tempPlayers.position).add(lifeOffset);
+        tempLife.updateMatrix();
+        life.current!.setMatrixAt(i, tempLife.matrix);
+        tempLifeColor.lerpColors(
+          new THREE.Color(0xff0000),
+          new THREE.Color(0x00ff00),
+          player.health / 30
+        );
+        life.current!.setColorAt(i, tempLifeColor);
+        life.current!.instanceMatrix.needsUpdate = true;
+        life.current!.instanceColor!.needsUpdate = true;
+
         if (followingPlayer === player.id) {
           marker.current?.position.copy(tempPlayers.position).add(markerOffset);
         }
@@ -100,6 +130,7 @@ const DroidPlayers = () => {
         <meshPhongMaterial color={[1, 1, 1]} transparent opacity={0.5} />
       </mesh>
       <instancedMesh ref={melee} args={[geom, meleeMat, playersLength]} />
+      <instancedMesh ref={life} args={[lifeGeom, lifeMat, playersLength]} />
       <instancedMesh
         ref={color}
         args={[nodes.Roundcube003.geometry, materials.COLOR, playersLength]}
