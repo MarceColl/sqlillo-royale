@@ -119,6 +119,7 @@ typedef struct {
   player_code_t code;
   float cd[NUM_SKILLS];
   int64_t health;
+  int8_t last_used_skill;
   int8_t used_skill;
   vecf_t skill_dir;
   int targeted_player;  // If -1 no target, else player entity id
@@ -668,6 +669,7 @@ static int me_cast(lua_State *L) {
 
   if (me->p->cd[skill] <= 0) {
     printf("CAST\n");
+    me->p->last_used_skill = -1;
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
     me->p->skill_dir.y = dir->y;
@@ -927,7 +929,7 @@ void update_traces(gamestate_t *gs) {
         yyjson_mut_int(gs->traces, gs->players[i].health);
     yyjson_mut_val *num_type = yyjson_mut_int(gs->traces, gs->meta[i].type);
     yyjson_mut_val *num_u_skill =
-        yyjson_mut_int(gs->traces, gs->players[i].used_skill);
+        yyjson_mut_int(gs->traces, gs->players[i].last_used_skill);
 
     yyjson_mut_val *item = yyjson_mut_obj(gs->traces);
 
@@ -1127,6 +1129,7 @@ void run_match(int num_files, char **files, char *roundillo) {
                                  .health = 30,
                                  // No skill used
                                  .used_skill = -1,
+                                 .last_used_skill = -1,
                                  // No default movement
                                  .movement = {.type = MT_NONE},
                                  // No target
@@ -1266,6 +1269,7 @@ void run_match(int num_files, char **files, char *roundillo) {
             gs.players[i].cd[2] = MELEE_COOLDOWN;
             break;
         }
+        gs.players[i].last_used_skill = gs.players[i].used_skill;
         gs.players[i].used_skill = -1;
         gs.players[i].cd[0] -= 1;
         gs.players[i].cd[1] -= 1;
