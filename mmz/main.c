@@ -589,6 +589,12 @@ static int me_pos(lua_State *L) {
   vecf_t *vec = (vecf_t *)lua_newuserdata(L, sizeof(vecf_t));
   luaL_getmetatable(L, "mimizu.vec");
   lua_setmetatable(L, -2);
+
+  if (me == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
   vec->x = me->gs->pos[me->p->id].x;
   vec->y = me->gs->pos[me->p->id].y;
   return 1;
@@ -669,7 +675,6 @@ static int me_cast(lua_State *L) {
   }
 
   if (me->p->cd[skill] <= 0) {
-    printf("CAST\n");
     me->p->last_used_skill = -1;
     me->p->used_skill = skill;
     me->p->skill_dir.x = dir->x;
@@ -1050,13 +1055,13 @@ void run_match(int num_files, char **files, char *roundillo) {
   pthread_mutex_init(&done_cond_mut, NULL);
   pthread_cond_init(&inc_tick_cond_var, NULL);
   pthread_cond_init(&done_cond_var, NULL);
-  printf("Initialized base condition vars\n");
+  printf("[DEBUG] Initialized base condition vars\n");
 
   int rows, n_players;
   PGresult *res;
 
   if (!files) {
-    printf("Querying from DB...\n");
+    printf("[DEBUG] Querying from DB...\n");
 
     res = PQexec(conn,
                  "SELECT\n\
@@ -1080,16 +1085,16 @@ void run_match(int num_files, char **files, char *roundillo) {
     rows = PQntuples(res);
 
     if (rows == 0) {
-      printf("No codes in DB\n");
+      printf("[DEBUG] No codes in DB\n");
       return;
     }
 
     n_players = rows;
 
-    printf("Got %d codes from DB\n", rows);
+    printf("[DEBUG] Got %d codes from DB\n", rows);
   } else {
     n_players = num_files;
-    printf("Using %d files\n", n_players);
+    printf("[DEBUG] Using %d files\n", n_players);
   }
 
   gamestate_t gs = {
@@ -1121,7 +1126,7 @@ void run_match(int num_files, char **files, char *roundillo) {
       sizeof(player_thread_data_t) * gs.n_players);
   init_traces(&gs);
 
-  printf("Setup thread data for %d\n", gs.n_players);
+  printf("[DEBUG] Setup thread data for %d\n", gs.n_players);
 
   fid_current = gs.n_players;
 
@@ -1159,15 +1164,15 @@ void run_match(int num_files, char **files, char *roundillo) {
 
       pthread_create(&gs.threads[i], NULL, &player_thread, &ptd[i]);
 
-      printf("Player #%d is %s\n", i, gs.players[i].username);
+      printf("[DEBUG] Player #%d is %s\n", i, gs.players[i].username);
     }
   }
 
-  printf("Setup %d players structures with %d max entities\n", gs.n_players,
-         MAX_ENTITIES);
+  printf("[DEBUG] Setup %d players structures with %d max entities\n",
+         gs.n_players, MAX_ENTITIES);
 
   float curr_time = 0;
-  printf("Starting match...\n");
+  printf("[DEBUG] Starting match...\n");
 
   vecf_t cod_center = (vecf_t){.x = rand_lim(gs.w), .y = rand_lim(gs.h)};
   int current_cod = 0;
@@ -1193,8 +1198,8 @@ void run_match(int num_files, char **files, char *roundillo) {
       gs.cod.x = cod_center.x;
       gs.cod.y = cod_center.y;
       target_radius = timing->radius;
-      printf("NEW COD %d (%f, %f) %d\n", tick, cod_center.x, cod_center.y,
-             timing->radius);
+      printf("[DEBUG] NEW COD %d (%f, %f) %d\n", tick, cod_center.x,
+             cod_center.y, timing->radius);
     }
 
     if (current_radius > target_radius) {
@@ -1379,7 +1384,7 @@ void run_match(int num_files, char **files, char *roundillo) {
 
 #if SAVE_TRACES
   save_traces(&gs);
-  printf("Traces saved on disk!\n");
+  printf("[DEBUG] Traces saved on disk!\n");
 #endif
 
   const char *json = yyjson_mut_write(gs.traces, 0, NULL);
@@ -1421,7 +1426,7 @@ void run_match(int num_files, char **files, char *roundillo) {
     }
 
     const char *game_uuid = PQgetvalue(res_ins, 0, 0);
-    printf("Game id is %s\n", game_uuid);
+    printf("[DEBUG] Game id is %s\n", game_uuid);
 
     for (int i = 0; i < gs.n_players; i++) {
       pthread_cancel(gs.threads[i]);
@@ -1440,7 +1445,7 @@ void run_match(int num_files, char **files, char *roundillo) {
       pg_command_error_handler(res_ins_2);
       PQclear(res_ins_2);
 
-      printf("Player #%d with %s connection created!\n", i,
+      printf("[DEBUG] Player #%d with %s connection created!\n", i,
              gs.players[i].username);
     }
 
@@ -1470,17 +1475,17 @@ int main(int argc, char **argv) {
   if (argc > 1) {
     if (strncmp(argv[1], "-r", 2) == 0) {
       if (argc < 3) {
-        printf("Invalid number of args for round method\n");
+        printf("[ERROR] Invalid number of args for round method\n");
         return 1;
       }
 
-      printf("Using round mode: %s\n", argv[2]);
+      printf("[DEBUG] Using round mode: %s\n", argv[2]);
       roundillo = argv[2];
     } else {
       files = (char **)malloc(sizeof(char **) * (argc - 1));
 
       for (int i = 1; i < argc; i++) {
-        printf("Using file %s\n", argv[i]);
+        printf("[DEBUG] Using file %s\n", argv[i]);
 
         FILE *fd = fopen(argv[i], "r");
         fseek(fd, 0, SEEK_END);
@@ -1501,20 +1506,21 @@ int main(int argc, char **argv) {
         PQsetdbLogin("localhost", "5432", NULL, NULL, "sqlillo", "mmz", "mmz");
 
     if (PQstatus(conn) == CONNECTION_BAD) {
-      printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+      printf("[ERROR] Connection to database failed: %s\n",
+             PQerrorMessage(conn));
 
       PQfinish(conn);
       exit(1);
     }
   }
 
-  printf("Start match...\n");
+  printf("[DEBUG] Start match...\n");
 
   /* while (true) { */
   run_match(argc - 1, files, roundillo);
   /* } */
 
-  printf("Exiting...\n");
+  printf("[DEBUG] Exiting...\n");
 
   PQfinish(conn);
   return 0;
