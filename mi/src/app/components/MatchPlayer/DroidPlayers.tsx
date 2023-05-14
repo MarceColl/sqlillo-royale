@@ -4,18 +4,31 @@ import { useRef } from "react";
 import droidUrl from "@/app/assets/DROID.glb?url";
 import { useGLTF } from "@react-three/drei";
 import { MatchStore, useMatchStore } from "./matchStore";
+import { Skill } from "./types";
 
 const tempPlayers = new THREE.Object3D();
+const tempMelee = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const mapOffset = new THREE.Vector3();
 const markerPos = new THREE.Vector3();
 const markerOffset = new THREE.Vector3(0, 70, 0);
+const meleeOffset = new THREE.Vector3(0, 2, 0);
+
+const geom = new THREE.CylinderGeometry(10, 10, 2, 32);
+const meleeMat = new THREE.MeshPhongMaterial({
+  color: 0x1122ff,
+  emissive: 0x1122ff,
+  emissiveIntensity: 0.5,
+  transparent: true,
+  opacity: 0.5,
+});
 
 const playersSizeSelector = (state: MatchStore) =>
   state.getGameState()?.players.length || 0;
 
 const DroidPlayers = () => {
   const { nodes, materials } = useGLTF(droidUrl) as any;
+  const melee = useRef<THREE.InstancedMesh>(null);
   const marker = useRef<THREE.Mesh>(null);
   const mesh6 = useRef<THREE.InstancedMesh>(null);
   const mesh5 = useRef<THREE.InstancedMesh>(null);
@@ -27,7 +40,7 @@ const DroidPlayers = () => {
   const playersLength = useMatchStore(playersSizeSelector);
 
   useFrame(() => {
-    const { getGameState, match, tick, followingPlayer, followPlayer } =
+    const { getGameState, match, tick, followingPlayer } =
       useMatchStore.getState();
     const gameState = getGameState();
     if (!match) return;
@@ -54,6 +67,14 @@ const DroidPlayers = () => {
         if (followingPlayer === null) {
           marker.current?.position.set(0, 5000, 0);
         }
+        if (player.usedSkill === Skill.MELEE) {
+          tempMelee.position.copy(tempPlayers.position).add(meleeOffset);
+          melee.current?.setMatrixAt(i, tempPlayers.matrix);
+          melee.current!.instanceMatrix.needsUpdate = true;
+        } else {
+          tempMelee.position.set(0, 5000, 0);
+          melee.current!.instanceMatrix.needsUpdate = true;
+        }
       }
       for (const mesh of meshes) {
         if (!mesh.current) continue;
@@ -72,6 +93,7 @@ const DroidPlayers = () => {
         <cylinderGeometry args={[0.5, 0.5, 100, 32]} />
         <meshPhongMaterial color={[1, 1, 1]} transparent opacity={0.5} />
       </mesh>
+      <instancedMesh ref={melee} args={[geom, meleeMat, playersLength]} />
       <instancedMesh
         ref={color}
         args={[nodes.Roundcube003.geometry, materials.COLOR, playersLength]}

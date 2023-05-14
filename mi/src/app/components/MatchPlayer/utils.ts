@@ -21,10 +21,12 @@ function mapBaseTrace({ id, x, y, ty }: BaseTrace) {
   };
 }
 
-function mapPlayerTrace({ h, ...rest }: PlayerTrace) {
+function mapPlayerTrace({ h, us, killed_by, ...rest }: PlayerTrace) {
   return {
     ...mapBaseTrace(rest),
     health: h,
+    usedSkill: us,
+    killedBy: killed_by,
   };
 }
 

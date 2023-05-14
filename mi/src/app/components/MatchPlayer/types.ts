@@ -10,12 +10,13 @@ export enum EntityKind {
   COD = "cod",
   OBSTACLE = 4,
 }
-/*
-TODOD skills
-0 projec
-1 dash
-2 melee
-*/
+
+export enum Skill {
+  PROJECTILE = 0,
+  DASH = 1,
+  MELEE = 2,
+}
+
 export type BaseEntity = {
   id: number;
   pos: vec2;
@@ -26,6 +27,8 @@ export type Player = BaseEntity & {
   kind: EntityKind.PLAYER;
   // 0 -> 100
   health: number;
+  usedSkill?: Skill;
+  killedBy?: string;
 };
 
 export type Bullet = BaseEntity & {
@@ -90,6 +93,8 @@ export type PlayerTrace = BaseTrace & {
   h: number;
   ty: EntityKind.PLAYER;
   username: string;
+  us: Skill;
+  killed_by: string | null;
 };
 
 export type BulletTrace = BaseTrace & {
