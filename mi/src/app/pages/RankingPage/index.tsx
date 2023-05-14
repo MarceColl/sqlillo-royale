@@ -7,7 +7,7 @@ import { useState } from "react";
 
 const RankingPage = () => {
   const showFirstTab = true;
-  const showSecondTab = localStorage.getItem("secondTabEnabled");
+  const showSecondTab = true;
   const showThirdTab = localStorage.getItem("thirdTabEnabled");
   const showAnyTab = showFirstTab || showSecondTab || showThirdTab;
   const [filter, setFilter] = useState<1 | 2 | 3 | null>(null);
