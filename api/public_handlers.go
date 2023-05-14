@@ -18,6 +18,8 @@ func (api *Api) PublicGamesHandler(c *fiber.Ctx) error {
 
 	if round := c.Query("round"); round != "" {
 		q = q.Where("round = ?", round)
+	} else {
+		q = q.Where("round IS NULL")
 	}
 
 	if err := q.Scan(c.Context()); err != nil {
