@@ -1084,22 +1084,41 @@ void run_match(int num_files, char **files, char *roundillo) {
   if (!files) {
     printf("[DEBUG] Querying from DB...\n");
 
-    res = PQexec(conn,
-                 "SELECT\n\
-    DISTINCT ON (u.username)\n\
-    u.username, c.id, c.code\n\
-    FROM\n\
-    users AS u\n\
-    JOIN\n\
-    codes AS c ON u.username = c.username\n\
-    WHERE\n\
-    u.deleted_at IS NULL\n\
-    AND c.code IS NOT NULL\n\
-    AND c.code != ''\n\
-    AND c.created_at > (NOW() - INTERVAL '1 hour')\n\
-    ORDER BY\n\
-    u.username,\n\
-    c.created_at DESC;");
+    if (!roundillo) {
+      res = PQexec(conn,
+                   "SELECT\n\
+          DISTINCT ON (u.username)\n\
+          u.username, c.id, c.code\n\
+          FROM\n\
+          users AS u\n\
+          JOIN\n\
+          codes AS c ON u.username = c.username\n\
+          WHERE\n\
+          u.deleted_at IS NULL\n\
+          AND c.code IS NOT NULL\n\
+          AND c.code != ''\n\
+          AND c.created_at > '2023-05-13 18:00'\n\
+          ORDER BY\n\
+          u.username,\n\
+          c.created_at DESC;");
+    } else {
+      res = PQexec(conn,
+                   "SELECT\n\
+          DISTINCT ON (u.username)\n\
+          u.username, c.id, c.code\n\
+          FROM\n\
+          users AS u\n\
+          JOIN\n\
+          codes AS c ON u.username = c.username\n\
+          WHERE\n\
+          u.deleted_at IS NULL\n\
+          AND c.code IS NOT NULL\n\
+          AND c.code != ''\n\
+          AND u.marce_puta IS TRUE\n\
+          ORDER BY\n\
+          u.username,\n\
+          c.created_at DESC;");
+    }
 
     pg_result_error_handler(res);
 
