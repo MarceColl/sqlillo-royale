@@ -10,7 +10,7 @@ import { useState } from "react";
 const MatchListPage = () => {
   const showFirstTab = true;
   const showSecondTab = true;
-  const showThirdTab = localStorage.getItem("thirdTabEnabled");
+  const showThirdTab = true;
   const showAnyTab = showFirstTab || showSecondTab || showThirdTab;
   const [filter, setFilter] = useState<1 | 2 | 3 | null>(null);
   const { data, isLoading } = useQuery([Queries.matchList, filter], () => {
