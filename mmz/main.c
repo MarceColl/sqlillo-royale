@@ -1545,3 +1545,6 @@ int main(int argc, char **argv) {
   printf("[DEBUG] Exiting...\n");
 
   PQfinish(conn);
+
+  return 0;
+}
