@@ -86,7 +86,7 @@ const DroidPlayers = () => {
         tempLifeColor.lerpColors(
           new THREE.Color(0xff0000),
           new THREE.Color(0x00ff00),
-          player.health / 30
+          (player.health / 30) * (player.health / 30)
         );
         life.current!.setColorAt(i, tempLifeColor);
         life.current!.instanceMatrix.needsUpdate = true;
