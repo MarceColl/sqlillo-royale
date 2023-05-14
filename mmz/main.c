@@ -116,6 +116,7 @@ typedef struct {
 typedef struct {
   int id;
   char *username;
+  char *killed_by;
   player_code_t code;
   float cd[NUM_SKILLS];
   int64_t health;
@@ -821,6 +822,7 @@ void *player_thread(void *data) {
     printf("[WARN] Player %d cannot run file: %s\n", id, lua_tostring(L, -1));
     ptd->dead = true;
     this_player->health = 0;
+    this_player->killed_by = "not knowing how to code";
     return NULL;
   }
 
@@ -907,6 +909,7 @@ void update_traces(gamestate_t *gs) {
   for (int i = 0; i < gs->active_entities; i++) {
     yyjson_mut_val *key_id = yyjson_mut_str(gs->traces, "id");
     yyjson_mut_val *key_username = yyjson_mut_str(gs->traces, "username");
+    yyjson_mut_val *key_killed_by = yyjson_mut_str(gs->traces, "killed_by");
     yyjson_mut_val *key_x = yyjson_mut_str(gs->traces, "x");
     yyjson_mut_val *key_y = yyjson_mut_str(gs->traces, "y");
     yyjson_mut_val *key_tick = yyjson_mut_str(gs->traces, "t");
@@ -915,10 +918,12 @@ void update_traces(gamestate_t *gs) {
     yyjson_mut_val *key_used_skill = yyjson_mut_str(gs->traces, "us");
 
     yyjson_mut_val *str_username = yyjson_mut_null(gs->traces);
+    yyjson_mut_val *str_killed_by = yyjson_mut_null(gs->traces);
 
     // Only set the username when it is a player
     if (gs->meta[i].type == PLAYER) {
       str_username = yyjson_mut_str(gs->traces, gs->players[i].username);
+      str_killed_by = yyjson_mut_str(gs->traces, gs->players[i].killed_by);
     }
 
     yyjson_mut_val *num_id = yyjson_mut_int(gs->traces, i);
@@ -935,6 +940,7 @@ void update_traces(gamestate_t *gs) {
 
     yyjson_mut_obj_add(item, key_id, num_id);
     yyjson_mut_obj_add(item, key_username, str_username);
+    yyjson_mut_obj_add(item, key_killed_by, str_killed_by);
     yyjson_mut_obj_add(item, key_x, num_x);
     yyjson_mut_obj_add(item, key_y, num_y);
     yyjson_mut_obj_add(item, key_tick, num_tick);
@@ -1126,6 +1132,7 @@ void run_match(int num_files, char **files, char *roundillo) {
     if (i < gs.n_players) {
       gs.players[i] = (player_t){.id = i,
                                  .username = PQgetvalue(res, i, 0),
+                                 .killed_by = NULL,
                                  .health = 30,
                                  // No skill used
                                  .used_skill = -1,
@@ -1265,6 +1272,10 @@ void run_match(int num_files, char **files, char *roundillo) {
                 continue;
               }
               gs.players[j].health -= MELEE_DAMAGE;
+
+              if (gs.players[j].health <= 0) {
+                gs.players[j].killed_by = gs.players[i].username;
+              }
             }
             gs.players[i].cd[2] = MELEE_COOLDOWN;
             break;
@@ -1315,6 +1326,12 @@ void run_match(int num_files, char **files, char *roundillo) {
             gs.meta[j].owner != i) {
           if (dist(&gs.pos[i], &gs.pos[j]) < 1.f) {
             gs.players[i].health -= 10;
+
+            // blu blu blu blu
+            if (gs.players[i].health <= 0) {
+              gs.players[i].killed_by = gs.players[gs.meta[j].owner].username;
+            }
+
             delete_entity(&gs, j);
             j--;
           }
