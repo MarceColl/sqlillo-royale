@@ -69,7 +69,7 @@ func (api *Api) PublicGameByIdHandler(c *fiber.Ctx) error {
 func (api *Api) PublicCarouselleHandler(c *fiber.Ctx) error {
 	data := new(Game)
 
-	bot := time.Now().Add(-time.Hour * 2)
+	bot := time.Now().Add(-time.Minute * 30)
 
 	if err := api.db.NewSelect().Model(data).Column("id", "config", "outcome", "created_at", "updated_at").Where("created_at > ?", bot).OrderExpr("RANDOM()").Limit(1).Scan(c.Context()); err != nil {
 		log.Printf("[WARN] Could not get random game for carouselle: %v\n", err)
