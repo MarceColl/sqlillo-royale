@@ -16,7 +16,7 @@ import (
 // SetupRankingCron is a simple minute cron that
 // updates the ranking
 func (api *Api) SetupRankingCron() {
-	for range time.Tick(time.Minute) {
+	for range time.Tick(time.Hour) {
 		go api.RankingCron(nil)
 	}
 }
