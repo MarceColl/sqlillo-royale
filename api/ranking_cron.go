@@ -43,7 +43,7 @@ func (api *Api) RankingCron(round *string) (bool, error) {
 	if err := api.db.RunInTx(context.Background(), &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		var xd []NewRankingData
 
-		s := "g.created_at > (NOW() - INTERVAL '120 minutes')"
+		s := "g.created_at > (NOW() - INTERVAL '24 hours')"
 
 		if round != nil {
 			s = fmt.Sprintf("g.round = '%s'", *round)
