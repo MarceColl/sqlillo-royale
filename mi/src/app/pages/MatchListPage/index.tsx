@@ -33,7 +33,7 @@ const MatchListPage = () => {
           <>
             <S.TabContainer>
               <S.Tab $active={filter === null} onClick={handleTabChange(null)}>
-                Casual ranking
+                Casual ranking (ran every 20 min.)
               </S.Tab>
               {showFirstTab && (
                 <S.Tab $active={filter === 1} onClick={handleTabChange(1)}>
@@ -59,15 +59,13 @@ const MatchListPage = () => {
               <th>id</th>
               <th>size</th>
               <th>nº players</th>
-              <th>duration</th>
               <th>time</th>
             </tr>
           </thead>
           <tbody>
             {matchList.map(({ id, config, created_at }: any) => {
-              const { duration, num_players, tick_time, height, weight } =
+              const { num_players, height, weight } =
                 config;
-              const seconds = duration * tick_time;
               const date = new Date(created_at);
               return (
                 <S.Match key={id}>
@@ -80,14 +78,10 @@ const MatchListPage = () => {
                     {height} x {weight}
                   </td>
                   <td>{num_players}</td>
-                  <td>{Math.round(seconds)} s</td>
                   <td>
                     {
                       // localized hour
-                      date.toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      date.toLocaleString("en-US")
                     }
                   </td>
                 </S.Match>

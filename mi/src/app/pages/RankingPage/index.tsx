@@ -32,7 +32,7 @@ const RankingPage = () => {
           <>
             <S.TabContainer>
               <S.Tab $active={filter === null} onClick={handleTabChange(null)}>
-                Casual ranking
+                Last 24h ranking
               </S.Tab>
               {showFirstTab && (
                 <S.Tab $active={filter === 1} onClick={handleTabChange(1)}>
